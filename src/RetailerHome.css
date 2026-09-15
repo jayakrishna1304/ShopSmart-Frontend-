@@ -1,0 +1,1213 @@
+/* ============================================================
+   SHOPSMART RETAILER HOME
+   ============================================================ */
+
+.retailer-home-page {
+  min-height: 100vh;
+
+  background:
+    radial-gradient(
+      circle at 90% 5%,
+      rgba(19, 170, 116, 0.08),
+      transparent 30%
+    ),
+    #f7f9f8;
+
+  color: #111827;
+
+  padding: 38px 0 70px;
+
+  animation: retailerHomeEnter 0.6s ease both;
+}
+
+@keyframes retailerHomeEnter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* ============================================================
+   CONTAINER
+   ============================================================ */
+
+.retailer-home-container {
+  width: min(1450px, 92%);
+  margin: 0 auto;
+}
+
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+
+.retailer-dashboard-header {
+  display: flex;
+
+  justify-content: space-between;
+  align-items: center;
+
+  gap: 25px;
+
+  margin-bottom: 35px;
+}
+
+.retailer-section-label {
+  display: inline-block;
+
+  font-size: 12px;
+
+  font-weight: 800;
+
+  letter-spacing: 4px;
+
+  text-transform: uppercase;
+
+  color: #079b69;
+
+  margin-bottom: 10px;
+}
+
+.retailer-dashboard-header h1 {
+  margin: 0;
+
+  font-size: clamp(38px, 5vw, 62px);
+
+  line-height: 1;
+
+  font-weight: 800;
+
+  letter-spacing: -3px;
+
+  color: #111827;
+}
+
+.retailer-dashboard-header h1 span {
+  color: #10ad74;
+}
+
+.retailer-dashboard-header p {
+  margin: 15px 0 0;
+
+  color: #66788a;
+
+  font-size: 16px;
+}
+
+.dashboard-period {
+  display: flex;
+
+  align-items: center;
+
+  gap: 9px;
+
+  padding: 11px 17px;
+
+  background: white;
+
+  border: 1px solid #dce9e3;
+
+  border-radius: 25px;
+
+  color: #078d62;
+
+  font-size: 13px;
+
+  font-weight: 800;
+
+  box-shadow:
+    0 8px 24px rgba(25, 70, 52, 0.05);
+}
+
+
+/* ============================================================
+   ERROR
+   ============================================================ */
+
+.dashboard-inline-error {
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+
+  padding: 13px 16px;
+
+  margin-bottom: 22px;
+
+  background: #fff3f2;
+
+  color: #b42318;
+
+  border: 1px solid #ffd3cf;
+
+  border-radius: 12px;
+
+  animation: errorIn 0.3s ease;
+}
+
+.dashboard-inline-error button {
+  margin-left: auto;
+
+  border: none;
+
+  background: white;
+
+  color: #b42318;
+
+  border: 1px solid #f2c4c0;
+
+  padding: 7px 13px;
+
+  border-radius: 8px;
+
+  cursor: pointer;
+
+  font-weight: 700;
+}
+
+
+/* ============================================================
+   KPI GRID
+   ============================================================ */
+
+.retailer-kpi-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, 1fr);
+
+  gap: 18px;
+
+  margin-bottom: 20px;
+}
+
+.retailer-kpi-card {
+  position: relative;
+
+  overflow: hidden;
+
+  background: white;
+
+  border: 1px solid #e1e9e5;
+
+  border-radius: 20px;
+
+  padding: 22px;
+
+  box-shadow:
+    0 10px 35px rgba(26, 69, 51, 0.055);
+
+  transition:
+    transform 0.28s ease,
+    box-shadow 0.28s ease,
+    border-color 0.28s ease;
+}
+
+.retailer-kpi-card::after {
+  content: "";
+
+  position: absolute;
+
+  width: 100px;
+  height: 100px;
+
+  right: -45px;
+  bottom: -50px;
+
+  border-radius: 50%;
+
+  background: rgba(16, 173, 116, 0.07);
+}
+
+.retailer-kpi-card:hover {
+  transform: translateY(-4px);
+
+  border-color: #bfe7d6;
+
+  box-shadow:
+    0 18px 45px rgba(26, 91, 66, 0.11);
+}
+
+.kpi-top {
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+
+  margin-bottom: 20px;
+}
+
+.kpi-icon {
+  width: 45px;
+  height: 45px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 13px;
+
+  background: #e5f8ef;
+
+  color: #078d62;
+
+  font-size: 20px;
+}
+
+.kpi-period {
+  font-size: 9px;
+
+  font-weight: 800;
+
+  letter-spacing: 1.5px;
+
+  color: #8b999e;
+}
+
+.kpi-value {
+  font-size: 31px;
+
+  font-weight: 800;
+
+  color: #111827;
+
+  line-height: 1.1;
+}
+
+.revenue-kpi .kpi-value {
+  color: #078d62;
+}
+
+.kpi-label {
+  margin-top: 7px;
+
+  color: #718087;
+
+  font-size: 13px;
+}
+
+
+/* ============================================================
+   SECONDARY METRICS
+   ============================================================ */
+
+.secondary-metrics {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-around;
+
+  background:
+    linear-gradient(
+      135deg,
+      #ffffff,
+      #f6fbf8
+    );
+
+  border: 1px solid #dce9e3;
+
+  border-radius: 18px;
+
+  padding: 17px 25px;
+
+  margin-bottom: 28px;
+
+  box-shadow:
+    0 8px 28px rgba(22, 72, 51, 0.05);
+}
+
+.secondary-metric {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 5px;
+}
+
+.secondary-metric span {
+  color: #849196;
+
+  font-size: 11px;
+
+  text-transform: uppercase;
+
+  letter-spacing: 1px;
+}
+
+.secondary-metric strong {
+  color: #17242c;
+
+  font-size: 18px;
+}
+
+.secondary-divider {
+  width: 1px;
+
+  height: 35px;
+
+  background: #dce7e2;
+}
+
+
+/* ============================================================
+   MAIN GRID
+   ============================================================ */
+
+.dashboard-main-grid {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1.5fr)
+    minmax(350px, 1fr);
+
+  gap: 22px;
+
+  margin-bottom: 22px;
+}
+
+
+/* ============================================================
+   LOWER GRID
+   ============================================================ */
+
+.dashboard-lower-grid {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1.5fr)
+    minmax(350px, 1fr);
+
+  gap: 22px;
+}
+
+
+/* ============================================================
+   PANELS
+   ============================================================ */
+
+.dashboard-panel {
+  background: white;
+
+  border: 1px solid #e1e9e5;
+
+  border-radius: 20px;
+
+  padding: 24px;
+
+  box-shadow:
+    0 10px 35px rgba(26, 69, 51, 0.055);
+}
+
+.panel-header {
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: flex-start;
+
+  gap: 20px;
+
+  margin-bottom: 22px;
+}
+
+.panel-mini-label {
+  font-size: 9px;
+
+  font-weight: 800;
+
+  letter-spacing: 2px;
+
+  color: #0b9e6c;
+}
+
+.panel-header h2 {
+  margin: 5px 0 0;
+
+  font-size: 23px;
+
+  color: #111827;
+
+  font-weight: 800;
+}
+
+.panel-header p {
+  margin: 6px 0 0;
+
+  color: #849196;
+
+  font-size: 12px;
+}
+
+.panel-link {
+  display: flex;
+
+  align-items: center;
+
+  gap: 7px;
+
+  border: none;
+
+  background: transparent;
+
+  color: #078d62;
+
+  font-size: 12px;
+
+  font-weight: 800;
+
+  cursor: pointer;
+
+  padding: 6px 0;
+}
+
+.panel-link i {
+  transition: transform 0.2s ease;
+}
+
+.panel-link:hover i {
+  transform: translateX(4px);
+}
+
+
+/* ============================================================
+   REVENUE HEADER
+   ============================================================ */
+
+.panel-revenue-total {
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: flex-end;
+
+  gap: 3px;
+}
+
+.panel-revenue-total span {
+  color: #8a989d;
+
+  font-size: 9px;
+
+  font-weight: 800;
+
+  letter-spacing: 1.5px;
+}
+
+.panel-revenue-total strong {
+  color: #07915f;
+
+  font-size: 20px;
+}
+
+
+/* ============================================================
+   REVENUE CHART
+   ============================================================ */
+
+.revenue-chart {
+  height: 230px;
+
+  display: flex;
+
+  align-items: flex-end;
+
+  gap: 7px;
+
+  padding:
+    20px 5px 25px;
+
+  border-bottom: 1px solid #e4ebe7;
+
+  position: relative;
+}
+
+.revenue-chart::before {
+  content: "";
+
+  position: absolute;
+
+  left: 0;
+  right: 0;
+
+  top: 25%;
+
+  border-top: 1px dashed #e7eeea;
+
+  z-index: 0;
+}
+
+.revenue-chart::after {
+  content: "";
+
+  position: absolute;
+
+  left: 0;
+  right: 0;
+
+  top: 50%;
+
+  border-top: 1px dashed #e7eeea;
+
+  z-index: 0;
+}
+
+.revenue-bar-wrapper {
+  position: relative;
+
+  flex: 1;
+
+  height: 100%;
+
+  display: flex;
+
+  align-items: flex-end;
+
+  justify-content: center;
+
+  min-width: 5px;
+
+  z-index: 1;
+}
+
+.revenue-bar {
+  width: 70%;
+
+  min-height: 3px;
+
+  max-width: 18px;
+
+  border-radius:
+    5px 5px 2px 2px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #13b878,
+      #079d68
+    );
+
+  transition:
+    height 0.5s ease,
+    transform 0.2s ease;
+
+  cursor: pointer;
+}
+
+.revenue-bar:hover {
+  transform: scaleX(1.2);
+
+  box-shadow:
+    0 5px 15px rgba(8, 157, 104, 0.25);
+}
+
+.revenue-bar-wrapper > span {
+  position: absolute;
+
+  bottom: -22px;
+
+  color: #9aa5aa;
+
+  font-size: 9px;
+}
+
+.revenue-tooltip {
+  position: absolute;
+
+  bottom: calc(100% + 8px);
+
+  left: 50%;
+
+  transform:
+    translateX(-50%)
+    translateY(5px);
+
+  background: #17242c;
+
+  color: white;
+
+  padding: 5px 8px;
+
+  border-radius: 6px;
+
+  font-size: 9px;
+
+  white-space: nowrap;
+
+  opacity: 0;
+
+  pointer-events: none;
+
+  transition: 0.2s ease;
+}
+
+.revenue-bar-wrapper:hover
+.revenue-tooltip {
+  opacity: 1;
+
+  transform:
+    translateX(-50%)
+    translateY(0);
+}
+
+
+/* ============================================================
+   SHOP PERFORMANCE
+   ============================================================ */
+
+.shop-performance-list {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 20px;
+}
+
+.shop-performance-row {
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+}
+
+.shop-rank {
+  width: 27px;
+  height: 27px;
+
+  flex-shrink: 0;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 8px;
+
+  background: #eaf9f2;
+
+  color: #078d62;
+
+  font-size: 11px;
+
+  font-weight: 800;
+}
+
+.shop-performance-info {
+  flex: 1;
+
+  min-width: 0;
+}
+
+.shop-name-line {
+  display: flex;
+
+  justify-content: space-between;
+
+  gap: 10px;
+
+  margin-bottom: 8px;
+}
+
+.shop-name-line strong {
+  color: #27333a;
+
+  font-size: 13px;
+
+  white-space: nowrap;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+}
+
+.shop-name-line span {
+  color: #909da1;
+
+  font-size: 10px;
+
+  white-space: nowrap;
+}
+
+.shop-progress {
+  width: 100%;
+
+  height: 6px;
+
+  background: #edf3f0;
+
+  border-radius: 20px;
+
+  overflow: hidden;
+}
+
+.shop-progress div {
+  height: 100%;
+
+  border-radius: 20px;
+
+  background:
+    linear-gradient(
+      90deg,
+      #079d68,
+      #13b878
+    );
+
+  transition:
+    width 0.6s ease;
+}
+
+.shop-revenue {
+  min-width: 75px;
+
+  text-align: right;
+
+  color: #07915f;
+
+  font-size: 13px;
+}
+
+
+/* ============================================================
+   RECENT ORDERS
+   ============================================================ */
+
+.recent-orders-list {
+  display: flex;
+
+  flex-direction: column;
+}
+
+.recent-order-row {
+  display: grid;
+
+  grid-template-columns:
+    40px
+    minmax(130px, 1fr)
+    75px
+    75px
+    90px;
+
+  align-items: center;
+
+  gap: 12px;
+
+  padding: 14px 0;
+
+  border-bottom: 1px solid #edf1ef;
+}
+
+.recent-order-row:last-child {
+  border-bottom: none;
+}
+
+.recent-order-icon {
+  width: 38px;
+  height: 38px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 10px;
+
+  background: #e5f8ef;
+
+  color: #078d62;
+
+  font-size: 16px;
+}
+
+.recent-order-info {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 4px;
+
+  min-width: 0;
+}
+
+.recent-order-info strong {
+  color: #26333a;
+
+  font-size: 12px;
+}
+
+.recent-order-info span {
+  color: #8b999e;
+
+  font-size: 10px;
+}
+
+.recent-order-date {
+  color: #7c8a90;
+
+  font-size: 10px;
+}
+
+.payment-badge {
+  display: inline-block;
+
+  padding: 5px 8px;
+
+  border-radius: 20px;
+
+  background: #eaf9f2;
+
+  color: #078d62;
+
+  font-size: 9px;
+
+  font-weight: 800;
+
+  text-transform: uppercase;
+}
+
+.payment-badge.pending {
+  background: #fff5df;
+
+  color: #b87814;
+}
+
+.payment-badge.failed,
+.payment-badge.cancelled {
+  background: #fff0ee;
+
+  color: #c23d32;
+}
+
+.recent-order-amount {
+  text-align: right;
+
+  color: #17242c;
+
+  font-size: 13px;
+}
+
+
+/* ============================================================
+   QUICK ACTIONS
+   ============================================================ */
+
+.quick-actions {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 11px;
+}
+
+.quick-actions button {
+  width: 100%;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 13px;
+
+  border: 1px solid #e2e9e5;
+
+  background: #fbfdfc;
+
+  border-radius: 13px;
+
+  padding: 13px;
+
+  text-align: left;
+
+  cursor: pointer;
+
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.quick-actions button:hover {
+  transform: translateX(3px);
+
+  background: #f0fbf6;
+
+  border-color: #bfe7d6;
+}
+
+.quick-action-icon {
+  width: 40px;
+  height: 40px;
+
+  flex-shrink: 0;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 11px;
+
+  background: #e5f8ef;
+
+  color: #078d62;
+
+  font-size: 17px;
+}
+
+.quick-actions button > div:nth-child(2) {
+  flex: 1;
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+.quick-actions strong {
+  color: #26333a;
+
+  font-size: 12px;
+}
+
+.quick-actions span {
+  color: #89979d;
+
+  font-size: 10px;
+}
+
+.quick-actions button > i {
+  color: #8a999d;
+
+  transition:
+    transform 0.2s ease;
+}
+
+.quick-actions button:hover > i {
+  color: #078d62;
+
+  transform: translateX(3px);
+}
+
+
+/* ============================================================
+   EMPTY
+   ============================================================ */
+
+.panel-empty {
+  min-height: 180px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+
+  text-align: center;
+
+  color: #849196;
+}
+
+.panel-empty > i {
+  font-size: 31px;
+
+  color: #0b9e6c;
+
+  margin-bottom: 10px;
+}
+
+.panel-empty h3 {
+  margin: 0;
+
+  color: #26333a;
+
+  font-size: 16px;
+}
+
+.panel-empty p {
+  margin: 6px 0 0;
+
+  color: #849196;
+
+  font-size: 12px;
+
+  max-width: 280px;
+}
+
+
+/* ============================================================
+   LOADING
+   ============================================================ */
+
+.retailer-dashboard-loading {
+  min-height: 70vh;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+
+  text-align: center;
+}
+
+.retailer-loading-spinner {
+  width: 45px;
+  height: 45px;
+
+  border: 4px solid #dcefe7;
+
+  border-top-color: #08a36b;
+
+  border-radius: 50%;
+
+  animation:
+    retailerSpin 0.8s linear infinite;
+
+  margin-bottom: 20px;
+}
+
+@keyframes retailerSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.retailer-dashboard-loading h3 {
+  margin: 0;
+
+  color: #18262e;
+}
+
+.retailer-dashboard-loading p {
+  color: #74838a;
+
+  font-size: 13px;
+}
+
+
+/* ============================================================
+   ERROR ANIMATION
+   ============================================================ */
+
+@keyframes errorIn {
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(-5px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0);
+  }
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 1150px) {
+
+  .retailer-kpi-grid {
+    grid-template-columns:
+      repeat(2, 1fr);
+  }
+
+  .dashboard-main-grid,
+  .dashboard-lower-grid {
+    grid-template-columns: 1fr;
+  }
+
+}
+
+
+@media (max-width: 800px) {
+
+  .retailer-dashboard-header {
+    align-items: flex-start;
+
+    flex-direction: column;
+  }
+
+  .secondary-metrics {
+    gap: 20px;
+
+    justify-content: flex-start;
+
+    overflow-x: auto;
+  }
+
+  .secondary-divider {
+    flex-shrink: 0;
+  }
+
+}
+
+
+@media (max-width: 650px) {
+
+  .retailer-home-page {
+    padding-top: 25px;
+  }
+
+  .retailer-home-container {
+    width: 94%;
+  }
+
+  .retailer-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .retailer-dashboard-header h1 {
+    font-size: 42px;
+
+    letter-spacing: -2px;
+  }
+
+  .dashboard-period {
+    width: fit-content;
+  }
+
+  .dashboard-panel {
+    padding: 18px;
+  }
+
+  .recent-order-row {
+    grid-template-columns:
+      38px
+      1fr
+      80px;
+  }
+
+  .recent-order-date,
+  .recent-order-payment {
+    display: none;
+  }
+
+  .revenue-chart {
+    gap: 3px;
+  }
+
+  .revenue-bar {
+    width: 80%;
+  }
+
+}

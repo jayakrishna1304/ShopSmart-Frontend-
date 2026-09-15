@@ -1,0 +1,380 @@
+.retailer-layout {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+
+    background: #f7f9f8;
+    color: #17221d;
+}
+
+
+/* =====================================================
+   MAIN
+   ===================================================== */
+
+.retailer-main {
+    flex: 1;
+    width: 100%;
+    min-height: calc(100vh - 150px);
+
+    background: #f7f9f8;
+}
+
+
+/* =====================================================
+   LOADING
+   ===================================================== */
+
+.retailer-loading {
+    min-height: 65vh;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    text-align: center;
+}
+
+.retailer-loading h3 {
+    margin: 18px 0 5px;
+
+    font-size: 18px;
+    font-weight: 700;
+
+    color: #17221d;
+}
+
+.retailer-loading p {
+    margin: 0;
+
+    font-size: 13px;
+    color: #7a8982;
+}
+
+.loading-spinner {
+    width: 38px;
+    height: 38px;
+
+    border: 4px solid #dce8e2;
+    border-top-color: #079d68;
+
+    border-radius: 50%;
+
+    animation: retailerSpin 0.8s linear infinite;
+}
+
+@keyframes retailerSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+
+/* =====================================================
+   FOOTER
+   ===================================================== */
+
+.retailer-footer {
+    margin-top: auto;
+
+    background: #10221a;
+
+    color: #dce8e2;
+}
+
+
+/* =====================================================
+   FOOTER CONTAINER
+   ===================================================== */
+
+.footer-container {
+    max-width: 1400px;
+
+    margin: auto;
+
+    padding: 52px 40px 42px;
+
+    display: grid;
+
+    grid-template-columns:
+        1.7fr
+        1fr
+        1fr
+        1.2fr;
+
+    gap: 55px;
+}
+
+
+/* =====================================================
+   BRAND
+   ===================================================== */
+
+.footer-brand {
+    max-width: 390px;
+}
+
+.footer-logo {
+    display: flex;
+    align-items: center;
+
+    gap: 12px;
+
+    margin-bottom: 17px;
+}
+
+.footer-logo-icon {
+    width: 43px;
+    height: 43px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 12px;
+
+    background: #079d68;
+
+    color: white;
+
+    font-size: 21px;
+    font-weight: 800;
+
+    box-shadow:
+        0 8px 22px rgba(7, 157, 104, 0.25);
+}
+
+.footer-logo h2 {
+    margin: 0;
+
+    color: #ffffff;
+
+    font-size: 20px;
+    font-weight: 750;
+}
+
+.footer-logo span {
+    display: block;
+
+    margin-top: 2px;
+
+    color: #83958b;
+
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.footer-brand p {
+    margin: 0;
+
+    color: #83958b;
+
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+
+/* =====================================================
+   FOOTER COLUMNS
+   ===================================================== */
+
+.footer-column {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.footer-column h3 {
+    margin: 0 0 18px;
+
+    color: #ffffff;
+
+    font-size: 12px;
+    font-weight: 750;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.8px;
+}
+
+.footer-column button {
+    padding: 0;
+    margin: 0 0 12px;
+
+    border: none;
+    background: transparent;
+
+    color: #83958b;
+
+    font-family: inherit;
+    font-size: 13px;
+
+    cursor: pointer;
+
+    transition: 0.2s ease;
+}
+
+.footer-column button:hover {
+    color: #5de0ad;
+
+    transform: translateX(3px);
+}
+
+
+/* =====================================================
+   SUPPORT
+   ===================================================== */
+
+.footer-support p {
+    margin: 0 0 17px;
+
+    max-width: 220px;
+
+    color: #83958b;
+
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.footer-status {
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    padding: 8px 12px;
+
+    border-radius: 20px;
+
+    border: 1px solid
+        rgba(255, 255, 255, 0.08);
+
+    background:
+        rgba(255, 255, 255, 0.04);
+
+    color: #83958b;
+
+    font-size: 11px;
+}
+
+.status-dot {
+    width: 7px;
+    height: 7px;
+
+    border-radius: 50%;
+
+    background: #39d98a;
+
+    box-shadow:
+        0 0 0 4px
+        rgba(57, 217, 138, 0.1);
+}
+
+
+/* =====================================================
+   FOOTER BOTTOM
+   ===================================================== */
+
+.footer-bottom {
+    max-width: 1400px;
+
+    margin: auto;
+
+    padding: 19px 40px;
+
+    border-top:
+        1px solid
+        rgba(255, 255, 255, 0.08);
+
+    display: flex;
+
+    justify-content: space-between;
+    align-items: center;
+
+    gap: 20px;
+}
+
+.footer-bottom p {
+    margin: 0;
+
+    color: #687970;
+
+    font-size: 11px;
+}
+
+.footer-bottom div {
+    display: flex;
+
+    gap: 22px;
+}
+
+.footer-bottom span {
+    color: #687970;
+
+    font-size: 11px;
+
+    cursor: pointer;
+
+    transition: 0.2s ease;
+}
+
+.footer-bottom span:hover {
+    color: #5de0ad;
+}
+
+
+/* =====================================================
+   TABLET
+   ===================================================== */
+
+@media (max-width: 1000px) {
+
+    .footer-container {
+        grid-template-columns:
+            1.5fr 1fr 1fr;
+
+        gap: 40px;
+    }
+
+    .footer-support {
+        grid-column: span 3;
+    }
+}
+
+
+/* =====================================================
+   MOBILE
+   ===================================================== */
+
+@media (max-width: 700px) {
+
+    .footer-container {
+        grid-template-columns: 1fr;
+
+        padding: 40px 24px 30px;
+
+        gap: 32px;
+    }
+
+    .footer-support {
+        grid-column: auto;
+    }
+
+    .footer-brand {
+        max-width: none;
+    }
+
+    .footer-bottom {
+        padding: 18px 24px;
+
+        flex-direction: column;
+
+        align-items: flex-start;
+    }
+
+    .footer-bottom div {
+        gap: 16px;
+    }
+}
