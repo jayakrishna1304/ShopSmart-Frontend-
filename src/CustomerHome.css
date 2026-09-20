@@ -3090,3 +3090,24 @@ input:focus-visible {
     font-size: 8px !important;
   }
 }
+@keyframes shopsmartSnackbarIn {
+  from {
+    opacity: 0;
+    transform: translateY(-15px) translateX(15px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) translateX(0);
+  }
+}
+
+@media (max-width: 576px) {
+  .shopsmart-home > div[style*="position: fixed"] {
+    left: 16px;
+    right: 16px;
+    top: 16px;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+}

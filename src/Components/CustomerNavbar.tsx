@@ -63,7 +63,7 @@ export function Customernavbar() {
               </li>
 
               <li className="nav-item">
-                <a className="nav-link custom-nav-link px-3" href="#contact">
+                <a className="nav-link custom-nav-link px-3" href="/contact">
                   Contact Us
                 </a>
               </li>

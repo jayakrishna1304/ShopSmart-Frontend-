@@ -12,7 +12,9 @@ const ORDER_SERVICE =
 
 const PRODUCT_SERVICE =
     "http://localhost:8082/shopsmart/product";
-
+const CUSTOMER_SERVICE =
+    "http://localhost:8086/customers";
+const VOUCHER_URL="https://localhost:8092/voucher"
 
 // ============================================================
 // JWT
@@ -24,6 +26,10 @@ interface JwtPayload {
     userId?: number;
     retailerId?: number;
     exp: number;
+}
+
+interface Customer {
+    address?: string | null;
 }
 
 
@@ -123,6 +129,9 @@ export function Myorders() {
 
     const [error, setError] =
         useState("");
+
+    const [customerAddress, setCustomerAddress] =
+        useState<string>("");
 
 
     // ========================================================
@@ -269,6 +278,50 @@ export function Myorders() {
 
 
     // ========================================================
+    // FETCH CUSTOMER ADDRESS
+    // ========================================================
+
+    const fetchCustomerAddress = async (
+        customerId: number,
+        token: string
+    ) => {
+        try {
+            const response =
+                await axios.get<Customer>(
+                    `${CUSTOMER_SERVICE}/${customerId}`,
+                    {
+                        headers: {
+                            Authorization:
+                                `Bearer ${token}`,
+                            Accept:
+                                "application/json"
+                        }
+                    }
+                );
+
+            const address =
+                typeof response.data?.address === "string"
+                    ? response.data.address.trim()
+                    : "";
+
+            setCustomerAddress(address);
+
+            console.log(
+                "Customer address:",
+                address
+            );
+        } catch (error) {
+            console.error(
+                "Unable to fetch customer address:",
+                error
+            );
+
+            setCustomerAddress("");
+        }
+    };
+
+
+    // ========================================================
     // FETCH ORDERS
     // ========================================================
 
@@ -381,6 +434,15 @@ export function Myorders() {
                 console.log(
                     "Fetching orders for customer:",
                     userId
+                );
+
+                // ------------------------------------------------
+                // GET CUSTOMER ADDRESS
+                // ------------------------------------------------
+
+                await fetchCustomerAddress(
+                    userId,
+                    token
                 );
 
 
@@ -1910,6 +1972,7 @@ export function Myorders() {
                                                     }}
                                                 >
                                                     {order.deliveryAddress ||
+                                                        customerAddress ||
                                                         "Address not available"}
                                                 </strong>
 

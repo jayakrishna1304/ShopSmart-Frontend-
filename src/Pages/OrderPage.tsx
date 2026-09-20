@@ -14,6 +14,8 @@ const CART_URL = "http://localhost:8083/shopsmart/cart";
 const LOYALTY_URL = "http://localhost:8090/shopsmart/loyalty";
 const LOYALTY_TRANSACTION_URL =
     "http://localhost:8091/shopsmart/loyaltyTransaction";
+const VOUCHER_URL = "http://localhost:8092/voucher";
+
 
 // =========================================================
 // YOUR UPI ID
@@ -47,9 +49,22 @@ interface CartProduct {
 
 interface FareSummary {
     subTotal: number;
-    redeemedPoints: number;
-    finalPayable: number;
-    pointsEarned: number;
+    voucherDiscount: number;
+    pointsRedeemed: number;
+    finalPayableAmount: number;
+    pointsToBeEarned: number;
+}
+
+interface Voucher {
+    voucherId: number;
+    voucherCode: string;
+    discountPercentage: number;
+    active: boolean;
+    minimumOrderAmount: number;
+    startDate?: string;
+    endDate?: string;
+    ownerId?: number;
+    shopId?: number;
 }
 
 interface LoyaltyAccount {
@@ -190,6 +205,26 @@ export function OrderPage() {
         useState<LoyaltyTransaction[]>([]);
 
     // =====================================================
+    // VOUCHER
+    // =====================================================
+
+    const [voucherCode, setVoucherCode] = useState("");
+    const [appliedVoucher, setAppliedVoucher] =
+        useState<Voucher | null>(null);
+    const [voucherLoading, setVoucherLoading] =
+        useState(false);
+    const [voucherMessage, setVoucherMessage] =
+        useState("");
+    const [voucherError, setVoucherError] =
+        useState("");
+
+    const [availableVouchers, setAvailableVouchers] =
+        useState<Voucher[]>([]);
+
+    const [loadingVouchers, setLoadingVouchers] =
+        useState(false);
+    const[voucherprice,setVoucherprice]=useState<number>();
+    // =====================================================
     // ERROR / SUCCESS
     // =====================================================
 
@@ -198,6 +233,56 @@ export function OrderPage() {
 
     const [successMessage, setSuccessMessage] =
         useState("");
+
+    // =====================================================
+    // SNACKBAR
+    // =====================================================
+
+    const [snackbar, setSnackbar] = useState<{
+        type: "success" | "error" | "info";
+        message: string;
+    } | null>(null);
+
+    useEffect(() => {
+        if (!snackbar) {
+            return;
+        }
+
+        const timer = window.setTimeout(() => {
+            setSnackbar(null);
+        }, 3500);
+
+        return () => window.clearTimeout(timer);
+    }, [snackbar]);
+
+    const showSnackbar = (
+        type: "success" | "error" | "info",
+        message: string
+    ) => {
+        setSnackbar({ type, message });
+    };
+
+    const getApiErrorMessage = (err: any, fallback: string) => {
+        const data = err?.response?.data;
+
+        if (typeof data === "string" && data.trim()) {
+            return data;
+        }
+
+        if (typeof data?.message === "string" && data.message.trim()) {
+            return data.message;
+        }
+
+        if (typeof data?.error === "string" && data.error.trim()) {
+            return data.error;
+        }
+
+        if (typeof err?.message === "string" && err.message.trim()) {
+            return err.message;
+        }
+
+        return fallback;
+    };
 
     // =====================================================
     // LOAD USER FROM JWT
@@ -488,6 +573,94 @@ export function OrderPage() {
     };
 
     // =========================================================
+    // LOAD AVAILABLE VOUCHERS
+    // =========================================================
+
+    useEffect(() => {
+
+        if (!customerId || !token || !shopId) {
+            return;
+        }
+
+        loadAvailableVouchers();
+
+    }, [customerId, token, shopId]);
+
+    const loadAvailableVouchers = async () => {
+
+        if (!customerId || !token || !shopId) {
+            return;
+        }
+
+        try {
+
+            setLoadingVouchers(true);
+
+            const response = await axios.get(
+                `${VOUCHER_URL}/shop/${shopId}`,
+                {
+                    headers: {
+                        Authorization:
+                            `Bearer ${token}`
+                    }
+                }
+            );
+
+            const vouchers: Voucher[] =
+                Array.isArray(response.data)
+                    ? response.data
+                    : [];
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const validVouchers = vouchers.filter(
+                (voucher) => {
+
+                    if (!voucher.active) {
+                        return false;
+                    }
+
+                    if (
+                        voucher.startDate &&
+                        today < new Date(
+                            `${voucher.startDate}T00:00:00`
+                        )
+                    ) {
+                        return false;
+                    }
+
+                    if (
+                        voucher.endDate &&
+                        today > new Date(
+                            `${voucher.endDate}T23:59:59`
+                        )
+                    ) {
+                        return false;
+                    }
+
+                    return true;
+                }
+            );
+
+            setAvailableVouchers(validVouchers);
+
+        } catch (err) {
+
+            console.error(
+                "Unable to load vouchers:",
+                err
+            );
+
+            setAvailableVouchers([]);
+
+        } finally {
+
+            setLoadingVouchers(false);
+        }
+    };
+
+    // =========================================================
     // LOAD BACKEND FARE SUMMARY
     // =========================================================
 
@@ -510,7 +683,8 @@ export function OrderPage() {
         customerId,
         token,
         cartItems.length,
-        pointsToRedeem
+        pointsToRedeem,
+        appliedVoucher?.voucherCode
     ]);
 
     const loadFareSummary = async () => {
@@ -527,7 +701,13 @@ export function OrderPage() {
                     {
                         params: {
                             customerId,
-                            pointsToRedeem
+                            pointsToRedeem,
+                            ...(appliedVoucher?.voucherCode
+                                ? {
+                                    voucherCode:
+                                        appliedVoucher.voucherCode
+                                }
+                                : {})
                         },
                         headers: {
                             Authorization:
@@ -540,7 +720,7 @@ export function OrderPage() {
                 response.data
             );
 
-        } catch (err) {
+        } catch (err: any) {
 
             console.error(
                 "Fare calculation error:",
@@ -548,7 +728,247 @@ export function OrderPage() {
             );
 
             setFareSummary(null);
+
+            if (appliedVoucher) {
+                const message = getApiErrorMessage(
+                    err,
+                    "Unable to calculate the voucher discount."
+                );
+
+                setVoucherError(message);
+                showSnackbar("error", message);
+            }
         }
+    };
+
+    // =========================================================
+    // APPLY VOUCHER
+    // =========================================================
+
+    const applyVoucher = async () => {
+
+        const code = voucherCode.trim().toUpperCase();
+
+        setVoucherError("");
+        setVoucherMessage("");
+
+        if (!code) {
+            const message = "Please enter a voucher code.";
+            setVoucherError(message);
+            showSnackbar("error", message);
+            return;
+        }
+
+        if (!customerId || !token || cartItems.length === 0) {
+            const message = "Unable to apply voucher right now.";
+            setVoucherError(message);
+            showSnackbar("error", message);
+            return;
+        }
+
+        try {
+
+            setVoucherLoading(true);
+
+            // =================================================
+            // 1. GET VOUCHER DETAILS
+            // =================================================
+
+            const response = await axios.get(
+                `${VOUCHER_URL}/code/${encodeURIComponent(code)}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
+
+            const voucher: Voucher = response.data;
+
+            if (!voucher) {
+                throw new Error("Voucher not found.");
+            }
+
+            if (!voucher.active) {
+                throw new Error("This voucher is not active.");
+            }
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (voucher.startDate) {
+                const startDate = new Date(voucher.startDate);
+                startDate.setHours(0, 0, 0, 0);
+
+                if (today < startDate) {
+                    throw new Error("This voucher is not active yet.");
+                }
+            }
+
+            if (voucher.endDate) {
+                const endDate = new Date(voucher.endDate);
+                endDate.setHours(0, 0, 0, 0);
+
+                if (today > endDate) {
+                    throw new Error("This voucher has expired.");
+                }
+            }
+
+            const discountPercentage =
+                Number(voucher.discountPercentage ?? 0);
+            console.log(discountPercentage)
+
+            if (
+                discountPercentage <= 0 ||
+                discountPercentage > 100
+            ) {
+                throw new Error(
+                    "Invalid voucher discount percentage."
+                );
+            }
+
+            const currentSubtotal =
+                Math.round(calculatedCartSubtotal * 100) / 100;
+            console.log(currentSubtotal)
+
+            if (
+                voucher.minimumOrderAmount != null &&
+                currentSubtotal <
+                    Number(voucher.minimumOrderAmount)
+            ) {
+                throw new Error(
+                    `Minimum order amount for this voucher is ₹${Number(
+                        voucher.minimumOrderAmount
+                    ).toFixed(2)}.`
+                );
+            }
+            else{
+                 setVoucherprice(currentSubtotal)
+
+            }
+            // =================================================
+            // 2. LET BACKEND CALCULATE THE AUTHORITATIVE FARE
+            //    BEFORE SAVING THE VOUCHER IN STATE.
+            // =================================================
+
+            const fareResponse = await axios.get(
+                `${ORDER_URL}/pre-checkout`,
+                {
+                    params: {
+                        customerId,
+                        pointsToRedeem,
+                        voucherCode: voucher.voucherCode
+                    },
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
+
+            if (!fareResponse.data) {
+                throw new Error(
+                    "Unable to calculate the voucher discount."
+                );
+            }
+
+            // Only update these states after the backend succeeds.
+            setFareSummary(fareResponse.data);
+            setAppliedVoucher(voucher);
+            setVoucherCode(voucher.voucherCode);
+
+            const message =
+                `${voucher.voucherCode} applied successfully.`;
+
+            setVoucherMessage(message);
+            showSnackbar("success", message);
+
+        } catch (err: any) {
+
+            console.error(
+                "Voucher application error:",
+                err
+            );
+
+            // IMPORTANT:
+            // Never render err.response.data directly.
+            // Axios may return an object, which can cause
+            // "Objects are not valid as a React child" and a
+            // completely white screen.
+            const message = getApiErrorMessage(
+                err,
+                "Invalid or unavailable voucher."
+            );
+
+            setAppliedVoucher(null);
+            setFareSummary(null);
+            setVoucherError(message);
+            setVoucherMessage("");
+            showSnackbar("error", message);
+
+        } finally {
+
+            setVoucherLoading(false);
+        }
+    };
+
+    // =========================================================
+    // REMOVE VOUCHER
+    // =========================================================
+
+    const removeVoucher = async () => {
+
+        setVoucherError("");
+        setVoucherMessage("");
+
+        if (customerId && token && cartItems.length > 0) {
+
+            try {
+
+                const response = await axios.get(
+                    `${ORDER_URL}/pre-checkout`,
+                    {
+                        params: {
+                            customerId,
+                            pointsToRedeem,
+                            voucherCode: ""
+                        },
+                        headers: {
+                            Authorization:
+                                `Bearer ${token}`
+                        }
+                    }
+                );
+
+                setFareSummary(response.data);
+                setAppliedVoucher(null);
+                setVoucherCode("");
+
+                const message = "Voucher removed successfully.";
+                setVoucherMessage(message);
+                showSnackbar("info", message);
+
+            } catch (err: any) {
+
+                console.error(
+                    "Fare recalculation error:",
+                    err
+                );
+
+                const message = getApiErrorMessage(
+                    err,
+                    "Unable to remove the voucher right now."
+                );
+
+                setVoucherError(message);
+                showSnackbar("error", message);
+            }
+
+            return;
+        }
+
+        setAppliedVoucher(null);
+        setVoucherCode("");
+        setFareSummary(null);
     };
 
     // =========================================================
@@ -572,23 +992,33 @@ export function OrderPage() {
                 calculatedCartSubtotal * 100
             ) / 100;
 
+    const voucherDiscount =
+        fareSummary?.voucherDiscount !== undefined
+            ? Number(fareSummary.voucherDiscount)
+            : 0;
+
+    const amountAfterVoucher =
+        Math.max(
+            0,
+            Math.round(
+                (subTotal - voucherDiscount) * 100
+            ) / 100
+        );
+
     const finalAmount =
-        fareSummary?.finalPayable !== undefined
-            ? Number(fareSummary.finalPayable)
+        fareSummary?.finalPayableAmount !== undefined
+            ? Number(fareSummary.finalPayableAmount)
             : Math.max(
                 0,
                 Math.round(
-                    (subTotal - pointsToRedeem) * 100
+                    (amountAfterVoucher - pointsToRedeem) * 100
                 ) / 100
             );
 
     const estimatedPointsEarned =
-        fareSummary?.pointsEarned !== undefined
-            ? Number(fareSummary.pointsEarned)
+        fareSummary?.pointsToBeEarned !== undefined
+            ? Number(fareSummary.pointsToBeEarned)
             : Math.floor(finalAmount / 100);
-
-    const amountAfterVoucher =
-        subTotal;
 
     // =========================================================
     // UPI PAYMENT LINK
@@ -747,7 +1177,13 @@ export function OrderPage() {
                     {
                         params: {
                             customerId,
-                            pointsToRedeem
+                            pointsToRedeem,
+                            ...(appliedVoucher?.voucherCode
+                                ? {
+                                    voucherCode:
+                                        appliedVoucher.voucherCode
+                                }
+                                : {})
                         },
                         headers: {
                             Authorization:
@@ -769,7 +1205,7 @@ export function OrderPage() {
              */
 
             if (
-                fare?.finalPayable !== undefined
+                fare?.finalPayableAmount !== undefined
             ) {
 
                 console.log(
@@ -798,7 +1234,10 @@ export function OrderPage() {
                         ? upiTransactionId.trim()
                         : null,
 
-                pointsToRedeem
+                pointsToRedeem,
+
+                voucherCode:
+                    appliedVoucher?.voucherCode ?? null
             };
 
             // ============================================
@@ -1067,6 +1506,72 @@ export function OrderPage() {
 
                 </div>
 
+            )}
+
+            {/* =================================================
+                SNACKBAR
+            ================================================= */}
+
+            {snackbar && (
+                <div
+                    role="alert"
+                    aria-live="polite"
+                    style={{
+                        position: "fixed",
+                        top: "24px",
+                        right: "24px",
+                        zIndex: 99999,
+                        minWidth: "300px",
+                        maxWidth: "420px",
+                        padding: "14px 18px",
+                        borderRadius: "10px",
+                        background:
+                            snackbar.type === "success"
+                                ? "#198754"
+                                : snackbar.type === "error"
+                                    ? "#dc3545"
+                                    : "#495057",
+                        color: "#ffffff",
+                        boxShadow:
+                            "0 8px 24px rgba(0,0,0,0.18)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        fontSize: "14px",
+                        fontWeight: 500
+                    }}
+                >
+                    <i
+                        className={
+                            snackbar.type === "success"
+                                ? "bi bi-check-circle-fill"
+                                : snackbar.type === "error"
+                                    ? "bi bi-exclamation-circle-fill"
+                                    : "bi bi-info-circle-fill"
+                        }
+                    ></i>
+
+                    <span style={{ flex: 1 }}>
+                        {snackbar.message}
+                    </span>
+
+                    <button
+                        type="button"
+                        onClick={() => setSnackbar(null)}
+                        aria-label="Close notification"
+                        style={{
+                            border: "none",
+                            background: "transparent",
+                            color: "#ffffff",
+                            fontSize: "20px",
+                            lineHeight: 1,
+                            cursor: "pointer",
+                            padding: 0
+                        }}
+                    >
+                        ×
+                    </button>
+                </div>
             )}
 
             {/* =================================================
@@ -1492,7 +1997,7 @@ export function OrderPage() {
                                     </h3>
 
                                     <p>
-                                        Voucher functionality is coming soon.
+                                        Apply a voucher and save on your order.
                                     </p>
 
                                 </div>
@@ -1501,14 +2006,255 @@ export function OrderPage() {
 
                         </div>
 
-                        <div className="voucher-minimum">
+                        {/* AVAILABLE VOUCHERS */}
 
-                            <i className="bi bi-info-circle"></i>
+                        {!appliedVoucher && (
 
-                            Retailer voucher functionality is currently being completed.
-                            Vouchers will be available here once the backend is ready.
+                            <div style={{ marginTop: "15px" }}>
 
-                        </div>
+                                {loadingVouchers ? (
+
+                                    <div className="voucher-minimum">
+                                        <i className="bi bi-arrow-repeat"></i>
+                                        {" "}
+                                        Loading available vouchers...
+                                    </div>
+
+                                ) : availableVouchers.length > 0 ? (
+
+                                    <div>
+
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "space-between",
+                                                marginBottom: "10px"
+                                            }}
+                                        >
+                                            <strong>
+                                                Available Vouchers
+                                            </strong>
+
+                                            <span
+                                                style={{
+                                                    fontSize: "13px",
+                                                    opacity: 0.7
+                                                }}
+                                            >
+                                                {availableVouchers.length} available
+                                            </span>
+                                        </div>
+
+                                        <div
+                                            style={{
+                                                display: "flex",
+                                                flexDirection: "column",
+                                                gap: "8px"
+                                            }}
+                                        >
+
+                                            {availableVouchers.map(
+                                                (voucher) => (
+
+                                                    <div
+                                                        key={voucher.voucherId}
+                                                        style={{
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            justifyContent: "space-between",
+                                                            gap: "12px",
+                                                            padding: "12px",
+                                                            border: "1px solid #e5e5e5",
+                                                            borderRadius: "8px"
+                                                        }}
+                                                    >
+
+                                                        <div>
+
+                                                            <strong>
+                                                                {voucher.voucherCode}
+                                                            </strong>
+
+                                                            <div
+                                                                style={{
+                                                                    fontSize: "13px",
+                                                                    marginTop: "4px"
+                                                                }}
+                                                            >
+                                                                {Number(
+                                                                    voucher.discountPercentage
+                                                                ).toFixed(0)}% OFF
+                                                                {" • "}
+                                                                Min. order ₹
+                                                                {Number(
+                                                                    voucher.minimumOrderAmount ?? 0
+                                                                ).toFixed(2)}
+                                                            </div>
+
+                                                        </div>
+
+                                                        <button
+                                                            type="button"
+                                                            className="text-button"
+                                                            onClick={() => {
+                                                                setVoucherCode(
+                                                                    voucher.voucherCode
+                                                                );
+                                                                setVoucherError("");
+                                                                setVoucherMessage("");
+                                                                showSnackbar(
+                                                                    "info",
+                                                                    `${voucher.voucherCode} selected. Click Apply to use it.`
+                                                                );
+                                                            }}
+                                                        >
+                                                            Use
+                                                        </button>
+
+                                                    </div>
+
+                                                )
+                                            )}
+
+                                        </div>
+
+                                    </div>
+
+                                ) : (
+
+                                    <div className="voucher-minimum">
+                                        <i className="bi bi-info-circle"></i>
+                                        {" "}
+                                        No active vouchers are available for this shop.
+                                    </div>
+
+                                )}
+
+                            </div>
+
+                        )}
+
+                        {/* APPLY VOUCHER */}
+
+                        {!appliedVoucher ? (
+
+                            <>
+
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        gap: "10px",
+                                        alignItems: "center",
+                                        marginTop: "15px"
+                                    }}
+                                >
+
+                                    <input
+                                        type="text"
+                                        value={voucherCode}
+                                        onChange={(event) => {
+                                            setVoucherCode(
+                                                event.target.value.toUpperCase()
+                                            );
+                                            setVoucherError("");
+                                            setVoucherMessage("");
+                                        }}
+                                        placeholder="Enter voucher code"
+                                        disabled={voucherLoading}
+                                        style={{
+                                            flex: 1,
+                                            padding: "12px",
+                                            borderRadius: "8px",
+                                            border: "1px solid #ddd",
+                                            textTransform: "uppercase"
+                                        }}
+                                    />
+
+                                    <button
+                                        type="button"
+                                        className="use-points-button"
+                                        onClick={applyVoucher}
+                                        disabled={voucherLoading}
+                                    >
+                                        {voucherLoading
+                                            ? "Applying..."
+                                            : "Apply"}
+                                    </button>
+
+                                </div>
+
+                                {voucherError && (
+
+                                    <div
+                                        className="voucher-minimum"
+                                        style={{ marginTop: "12px" }}
+                                    >
+                                        <i className="bi bi-exclamation-circle"></i>
+                                        {" "}
+                                        {voucherError}
+                                    </div>
+
+                                )}
+
+                            </>
+
+                        ) : (
+
+                            <div
+                                className="voucher-minimum"
+                                style={{
+                                    marginTop: "15px",
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                    gap: "12px"
+                                }}
+                            >
+
+                                <div>
+
+                                    <strong>
+                                        <i className="bi bi-check-circle-fill"></i>
+                                        {" "}
+                                        {appliedVoucher.voucherCode} applied
+                                    </strong>
+
+                                    <div style={{ marginTop: "5px" }}>
+                                        {Number(
+                                            appliedVoucher.discountPercentage
+                                        ).toFixed(0)}% discount
+                                        {" • "}
+                                        You save ₹
+                                        {voucherDiscount.toFixed(2)}
+                                    </div>
+
+                                </div>
+
+                                <button
+                                    type="button"
+                                    className="text-button"
+                                    onClick={removeVoucher}
+                                >
+                                    Remove
+                                </button>
+
+                            </div>
+
+                        )}
+
+                        {voucherMessage && !voucherError && (
+
+                            <div
+                                className="points-saving"
+                                style={{ marginTop: "12px" }}
+                            >
+                                <i className="bi bi-check-circle-fill"></i>
+                                {" "}
+                                {voucherMessage}
+                            </div>
+
+                        )}
 
                     </div>
 
@@ -2010,6 +2756,25 @@ export function OrderPage() {
 
                         </div>
 
+                        {/* VOUCHER */}
+
+                        {voucherDiscount > 0 && (
+
+                            <div className="summary-row loyalty-discount-row">
+
+                                <span>
+                                    Voucher Discount
+                                </span>
+
+                                <strong>
+                                    -₹
+                                    {voucherDiscount.toFixed(2)}
+                                </strong>
+
+                            </div>
+
+                        )}
+
                         {/* LOYALTY */}
 
                         {pointsToRedeem > 0 && (
@@ -2073,7 +2838,7 @@ export function OrderPage() {
                                 <i className="bi bi-piggy-bank-fill"></i>
 
                                 You're saving ₹
-                                {pointsToRedeem.toFixed(2)}
+                               {(pointsToRedeem + (voucherprice ?? 0)).toFixed(2)}
                                 {" "}
                                 on this order
 

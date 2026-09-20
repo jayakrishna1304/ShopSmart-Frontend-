@@ -3,19 +3,23 @@ import type { ChangeEvent, FormEvent } from "react";
 import "../AddVoucherPage.css";
 
 interface Voucher {
-    id?: number;
-    voucherId?: number;
-    ownerId?: number;
+    voucherId: number;
     voucherCode: string;
-    pointsCost: number;
-    expiryDays?: number;
-    expiryDate?: string;
+    discountPercentage: number;
+    active: boolean;
+    minimumOrderAmount?: number;
+    startDate?: string;
+    endDate?: string;
+    ownerId: number;
+    shopId: number;
 }
 
 interface Shop {
     shopId: number;
     shopName: string;
+    address?: string;
     ownerId?: number;
+    status?: string;
 }
 
 interface AddVoucherPageProps {
@@ -24,50 +28,80 @@ interface AddVoucherPageProps {
 
 interface VoucherFormData {
     ownerId: string;
+    shopId: string;
     voucherCode: string;
-    pointsCost: string;
-    expiryDays: string;
+    discountPercentage: string;
+    minimumOrderAmount: string;
+    startDate: string;
+    endDate: string;
 }
 
 const VOUCHER_URL =
-    "http://localhost:8089/shopsmart/loyaltyTransaction/retailer/vouchers";
+    "http://localhost:8092/voucher";
 
-const SHOP_URL = "http://localhost:8081/shopsmart/shop";
+const SHOP_URL =
+    "http://localhost:8085/shopsmart/shop";
 
 export default function AddVoucherPage({
     retailerId,
 }: AddVoucherPageProps) {
-    const [formData, setFormData] = useState<VoucherFormData>({
-        ownerId: String(retailerId),
-        voucherCode: "",
-        pointsCost: "40",
-        expiryDays: "30",
-    });
 
-    const [retailerVouchers, setRetailerVouchers] = useState<Voucher[]>([]);
-    const [shopsList, setShopsList] = useState<Shop[]>([]);
+    // =====================================================
+    // FORM
+    // =====================================================
 
-    const [statusMessage, setStatusMessage] = useState("");
-    const [loading, setLoading] = useState(false);
+    const [formData, setFormData] =
+        useState<VoucherFormData>({
+            ownerId: String(retailerId),
+            shopId: "",
+            voucherCode: "",
+            discountPercentage: "10",
+            minimumOrderAmount: "500",
+            startDate: new Date()
+                .toISOString()
+                .split("T")[0],
+            endDate: "",
+        });
+
+    const [retailerVouchers, setRetailerVouchers] =
+        useState<Voucher[]>([]);
+
+    const [shopsList, setShopsList] =
+        useState<Shop[]>([]);
+
+    const [statusMessage, setStatusMessage] =
+        useState("");
+
+    const [loading, setLoading] =
+        useState(false);
 
     const [editingVoucherId, setEditingVoucherId] =
         useState<number | null>(null);
 
-    const [searchTerm, setSearchTerm] = useState("");
-    const [copiedCode, setCopiedCode] = useState("");
+    const [searchTerm, setSearchTerm] =
+        useState("");
+
+    const [copiedCode, setCopiedCode] =
+        useState("");
 
     // =====================================================
     // AUTH
     // =====================================================
 
     const getHeaders = (): HeadersInit => {
-        const token = localStorage.getItem("shopsmart_token");
+
+        const token =
+            localStorage.getItem(
+                "shopsmart_token"
+            );
 
         return {
             "Content-Type": "application/json",
+
             ...(token
                 ? {
-                      Authorization: `Bearer ${token}`,
+                      Authorization:
+                          `Bearer ${token}`,
                   }
                 : {}),
         };
@@ -78,77 +112,154 @@ export default function AddVoucherPage({
     // =====================================================
 
     useEffect(() => {
+
         setFormData((prev) => ({
             ...prev,
             ownerId: String(retailerId),
         }));
+
     }, [retailerId]);
 
     // =====================================================
-    // FETCH VOUCHERS
+    // FETCH RETAILER VOUCHERS
     // =====================================================
 
-    const fetchRetailerVouchers = async () => {
-        try {
-            const response = await fetch(VOUCHER_URL, {
-                headers: getHeaders(),
-            });
+    const fetchRetailerVouchers =
+        async () => {
 
-            if (!response.ok) {
-                throw new Error("Unable to load vouchers");
-            }
+            try {
 
-            const data = await response.json();
+                const response =
+                    await fetch(
+                        `${VOUCHER_URL}/owner/${retailerId}`,
+                        {
+                            method: "GET",
+                            headers: getHeaders(),
+                        }
+                    );
 
-            if (Array.isArray(data)) {
-                // Only show vouchers belonging to logged-in retailer
-                const retailerOnly = data.filter(
-                    (voucher: Voucher) =>
-                        Number(voucher.ownerId) === Number(retailerId)
+                if (
+                    response.status === 401 ||
+                    response.status === 403
+                ) {
+                    throw new Error(
+                        "You are not authorized to view vouchers."
+                    );
+                }
+
+                if (!response.ok) {
+                    throw new Error(
+                        "Unable to load vouchers."
+                    );
+                }
+
+                const data =
+                    await response.json();
+
+                if (Array.isArray(data)) {
+
+                    setRetailerVouchers(
+                        data.filter(
+                            (voucher: Voucher) =>
+                                Number(
+                                    voucher.ownerId
+                                ) ===
+                                Number(retailerId)
+                        )
+                    );
+                } else {
+
+                    setRetailerVouchers([]);
+                }
+
+            } catch (error) {
+
+                console.error(
+                    "Error fetching vouchers:",
+                    error
                 );
 
-                setRetailerVouchers(retailerOnly);
+                setStatusMessage(
+                    error instanceof Error
+                        ? error.message
+                        : "Unable to load vouchers."
+                );
             }
-        } catch (error) {
-            console.error("Error fetching vouchers:", error);
-            setStatusMessage("Unable to load vouchers.");
-        }
-    };
+        };
 
     // =====================================================
-    // FETCH SHOPS
+    // FETCH RETAILER SHOPS
     // =====================================================
 
-    const fetchShopsList = async () => {
-        try {
-            const response = await fetch(
-                `${SHOP_URL}/retailer/${retailerId}`,
-                {
-                    headers: getHeaders(),
+    const fetchShopsList =
+        async () => {
+
+            try {
+
+                const response =
+                    await fetch(
+                        `${SHOP_URL}/retailer/${retailerId}`,
+                        {
+                            method: "GET",
+                            headers: getHeaders(),
+                        }
+                    );
+
+                if (!response.ok) {
+                    console.error(
+                        "Unable to load shops:",
+                        response.status
+                    );
+
+                    return;
                 }
-            );
 
-            if (!response.ok) {
-                return;
+                const data =
+                    await response.json();
+
+                if (Array.isArray(data)) {
+
+                    setShopsList(data);
+
+                } else if (
+                    Array.isArray(data?.shops)
+                ) {
+
+                    setShopsList(data.shops);
+
+                } else if (
+                    Array.isArray(data?.data)
+                ) {
+
+                    setShopsList(data.data);
+
+                } else {
+
+                    setShopsList([]);
+                }
+
+            } catch (error) {
+
+                console.error(
+                    "Error fetching shops:",
+                    error
+                );
             }
+        };
 
-            const data = await response.json();
-
-            if (Array.isArray(data)) {
-                setShopsList(data);
-            } else if (Array.isArray(data?.shops)) {
-                setShopsList(data.shops);
-            } else if (Array.isArray(data?.data)) {
-                setShopsList(data.data);
-            }
-        } catch (error) {
-            console.error("Error fetching shops:", error);
-        }
-    };
+    // =====================================================
+    // INITIAL LOAD
+    // =====================================================
 
     useEffect(() => {
+
+        if (!retailerId) {
+            return;
+        }
+
         fetchRetailerVouchers();
         fetchShopsList();
+
     }, [retailerId]);
 
     // =====================================================
@@ -156,9 +267,15 @@ export default function AddVoucherPage({
     // =====================================================
 
     const handleChange = (
-        event: ChangeEvent<HTMLInputElement>
+        event: ChangeEvent<
+            HTMLInputElement | HTMLSelectElement
+        >
     ) => {
-        const { name, value } = event.target;
+
+        const {
+            name,
+            value,
+        } = event.target;
 
         setFormData((prev) => ({
             ...prev,
@@ -167,167 +284,310 @@ export default function AddVoucherPage({
     };
 
     // =====================================================
+    // QUICK DISCOUNT
+    // =====================================================
+
+    const handleQuickDiscount =
+        (percentage: string) => {
+
+            setFormData((prev) => ({
+                ...prev,
+                discountPercentage:
+                    percentage,
+            }));
+        };
+
+    // =====================================================
     // QUICK EXPIRY
     // =====================================================
 
-    const handleQuickPick = (days: string) => {
-        setFormData((prev) => ({
-            ...prev,
-            expiryDays: days,
-        }));
-    };
+    const handleQuickExpiry =
+        (days: number) => {
+
+            const start =
+                new Date();
+
+            const end =
+                new Date();
+
+            end.setDate(
+                end.getDate() + days
+            );
+
+            setFormData((prev) => ({
+                ...prev,
+
+                startDate:
+                    start
+                        .toISOString()
+                        .split("T")[0],
+
+                endDate:
+                    end
+                        .toISOString()
+                        .split("T")[0],
+            }));
+        };
 
     // =====================================================
     // AUTO GENERATE VOUCHER
     // =====================================================
 
-    const handleAutoGenerate = () => {
-        let shopPrefix = "SHOPSMART";
+    const handleAutoGenerate =
+        () => {
 
-        const matchedShop = shopsList.find(
-            (shop) =>
-                Number(shop.ownerId) === Number(retailerId)
-        );
+            let shopPrefix =
+                "SHOPSMART";
 
-        if (matchedShop?.shopName) {
-            shopPrefix = matchedShop.shopName
-                .replace(/[^a-zA-Z0-9]/g, "")
-                .toUpperCase()
-                .slice(0, 8);
-        }
+            const selectedShop =
+                shopsList.find(
+                    (shop) =>
+                        String(
+                            shop.shopId
+                        ) ===
+                        String(
+                            formData.shopId
+                        )
+                );
 
-        const currentYear = new Date().getFullYear();
+            if (
+                selectedShop?.shopName
+            ) {
 
-        const randomSuffix = Math.random()
-            .toString(36)
-            .substring(2, 6)
-            .toUpperCase();
+                shopPrefix =
+                    selectedShop.shopName
+                        .replace(
+                            /[^a-zA-Z0-9]/g,
+                            ""
+                        )
+                        .toUpperCase()
+                        .slice(0, 8);
+            }
 
-        const generatedCode =
-            `${shopPrefix}-${currentYear}-${randomSuffix}`;
+            const currentYear =
+                new Date()
+                    .getFullYear();
 
-        setFormData((prev) => ({
-            ...prev,
-            voucherCode: generatedCode,
-        }));
-    };
+            const randomSuffix =
+                Math.random()
+                    .toString(36)
+                    .substring(2, 6)
+                    .toUpperCase();
+
+            const generatedCode =
+                `${shopPrefix}-${currentYear}-${randomSuffix}`;
+
+            setFormData((prev) => ({
+                ...prev,
+                voucherCode:
+                    generatedCode,
+            }));
+        };
 
     // =====================================================
     // COPY CODE
     // =====================================================
 
-    const handleCopyCode = async (code: string) => {
-        try {
-            await navigator.clipboard.writeText(code);
+    const handleCopyCode =
+        async (code: string) => {
 
-            setCopiedCode(code);
+            try {
 
-            setTimeout(() => {
-                setCopiedCode("");
-            }, 2000);
-        } catch {
-            setStatusMessage("Unable to copy voucher code.");
-        }
-    };
+                await navigator.clipboard
+                    .writeText(code);
+
+                setCopiedCode(code);
+
+                setTimeout(() => {
+                    setCopiedCode("");
+                }, 2000);
+
+            } catch {
+
+                setStatusMessage(
+                    "Unable to copy voucher code."
+                );
+            }
+        };
 
     // =====================================================
     // EDIT
     // =====================================================
 
-    const handleEditClick = (voucher: Voucher) => {
-        const voucherId =
-            voucher.id ?? voucher.voucherId;
+    const handleEditClick =
+        (voucher: Voucher) => {
 
-        if (voucherId === undefined) {
-            return;
-        }
+            setEditingVoucherId(
+                voucher.voucherId
+            );
 
-        setEditingVoucherId(voucherId);
+            setFormData({
+                ownerId:
+                    String(
+                        voucher.ownerId ??
+                        retailerId
+                    ),
 
-        setFormData({
-            ownerId: String(
-                voucher.ownerId ?? retailerId
-            ),
-            voucherCode: voucher.voucherCode ?? "",
-            pointsCost: String(
-                voucher.pointsCost ?? 40
-            ),
-            expiryDays: String(
-                voucher.expiryDays ?? 30
-            ),
-        });
+                shopId:
+                    String(
+                        voucher.shopId
+                    ),
 
-        setStatusMessage(
-            `Editing voucher: ${voucher.voucherCode}`
-        );
-    };
+                voucherCode:
+                    voucher.voucherCode ??
+                    "",
+
+                discountPercentage:
+                    String(
+                        voucher.discountPercentage ??
+                        10
+                    ),
+
+                minimumOrderAmount:
+                    String(
+                        voucher.minimumOrderAmount ??
+                        0
+                    ),
+
+                startDate:
+                    voucher.startDate ??
+                    new Date()
+                        .toISOString()
+                        .split("T")[0],
+
+                endDate:
+                    voucher.endDate ??
+                    "",
+            });
+
+            setStatusMessage(
+                `Editing voucher: ${voucher.voucherCode}`
+            );
+        };
 
     // =====================================================
     // CANCEL EDIT
     // =====================================================
 
-    const handleCancelEdit = () => {
-        setEditingVoucherId(null);
+    const handleCancelEdit =
+        () => {
 
-        setFormData({
-            ownerId: String(retailerId),
-            voucherCode: "",
-            pointsCost: "40",
-            expiryDays: "30",
-        });
+            setEditingVoucherId(null);
 
-        setStatusMessage("");
-    };
+            setFormData({
+                ownerId:
+                    String(retailerId),
+
+                shopId: "",
+
+                voucherCode: "",
+
+                discountPercentage:
+                    "10",
+
+                minimumOrderAmount:
+                    "500",
+
+                startDate:
+                    new Date()
+                        .toISOString()
+                        .split("T")[0],
+
+                endDate: "",
+            });
+
+            setStatusMessage("");
+        };
 
     // =====================================================
     // DELETE
     // =====================================================
 
-    const handleDeleteClick = async (
-        voucherId?: number
-    ) => {
-        if (voucherId === undefined) {
-            return;
-        }
+    const handleDeleteClick =
+        async (
+            voucherId?: number
+        ) => {
 
-        const confirmed = window.confirm(
-            "Are you sure you want to delete this voucher?"
-        );
+            if (
+                voucherId ===
+                undefined
+            ) {
+                return;
+            }
 
-        if (!confirmed) {
-            return;
-        }
+            const confirmed =
+                window.confirm(
+                    "Are you sure you want to delete this voucher?"
+                );
 
-        try {
-            const response = await fetch(
-                `${VOUCHER_URL}/${voucherId}`,
-                {
-                    method: "DELETE",
-                    headers: getHeaders(),
+            if (!confirmed) {
+                return;
+            }
+
+            try {
+
+                setLoading(true);
+
+                const response =
+                    await fetch(
+                        `${VOUCHER_URL}/${voucherId}`,
+                        {
+                            method: "DELETE",
+                            headers:
+                                getHeaders(),
+                        }
+                    );
+
+                if (
+                    response.status === 401 ||
+                    response.status === 403
+                ) {
+
+                    throw new Error(
+                        "You are not authorized to delete this voucher."
+                    );
                 }
-            );
 
-            if (!response.ok) {
-                throw new Error("Delete failed");
+                if (!response.ok) {
+
+                    const errorText =
+                        await response.text();
+
+                    throw new Error(
+                        errorText ||
+                        "Delete failed."
+                    );
+                }
+
+                setStatusMessage(
+                    "Voucher deleted successfully!"
+                );
+
+                if (
+                    editingVoucherId ===
+                    voucherId
+                ) {
+
+                    handleCancelEdit();
+                }
+
+                await fetchRetailerVouchers();
+
+            } catch (error) {
+
+                console.error(error);
+
+                setStatusMessage(
+                    error instanceof Error
+                        ? error.message
+                        : "Unable to delete voucher."
+                );
+
+            } finally {
+
+                setLoading(false);
             }
-
-            setStatusMessage(
-                "Voucher deleted successfully!"
-            );
-
-            if (editingVoucherId === voucherId) {
-                handleCancelEdit();
-            }
-
-            await fetchRetailerVouchers();
-        } catch (error) {
-            console.error(error);
-
-            setStatusMessage(
-                "Unable to delete voucher."
-            );
-        }
-    };
+        };
 
     // =====================================================
     // SUBMIT CREATE / UPDATE
@@ -336,35 +596,168 @@ export default function AddVoucherPage({
     const handleSubmit = async (
         event: FormEvent<HTMLFormElement>
     ) => {
+
         event.preventDefault();
 
         setLoading(true);
         setStatusMessage("");
 
+        if (
+            !formData.shopId
+        ) {
+
+            setStatusMessage(
+                "Please select a shop."
+            );
+
+            setLoading(false);
+
+            return;
+        }
+
+        if (
+            !formData.voucherCode.trim()
+        ) {
+
+            setStatusMessage(
+                "Voucher code is required."
+            );
+
+            setLoading(false);
+
+            return;
+        }
+
+        const discount =
+            Number(
+                formData.discountPercentage
+            );
+
+        if (
+            discount <= 0 ||
+            discount > 100
+        ) {
+
+            setStatusMessage(
+                "Discount must be between 1% and 100%."
+            );
+
+            setLoading(false);
+
+            return;
+        }
+
+        const minimumOrder =
+            Number(
+                formData.minimumOrderAmount
+            );
+
+        if (
+            minimumOrder < 0
+        ) {
+
+            setStatusMessage(
+                "Minimum order amount cannot be negative."
+            );
+
+            setLoading(false);
+
+            return;
+        }
+
+        if (
+            formData.startDate &&
+            formData.endDate &&
+            formData.endDate <
+                formData.startDate
+        ) {
+
+            setStatusMessage(
+                "End date cannot be before start date."
+            );
+
+            setLoading(false);
+
+            return;
+        }
+
         const isEditing =
             editingVoucherId !== null;
 
-        const url = isEditing
-            ? `${VOUCHER_URL}/${editingVoucherId}`
-            : VOUCHER_URL;
+        const url =
+            isEditing
+                ? `${VOUCHER_URL}/${editingVoucherId}`
+                : VOUCHER_URL;
+
+        const payload = {
+            ownerId:
+                Number(retailerId),
+
+            shopId:
+                Number(formData.shopId),
+
+            voucherCode:
+                formData.voucherCode
+                    .trim()
+                    .toUpperCase(),
+
+            discountPercentage:
+                discount,
+
+            active: true,
+
+            minimumOrderAmount:
+                minimumOrder,
+
+            startDate:
+                formData.startDate ||
+                null,
+
+            endDate:
+                formData.endDate ||
+                null,
+        };
 
         try {
-            const response = await fetch(url, {
-                method: isEditing ? "PUT" : "POST",
-                headers: getHeaders(),
-                body: JSON.stringify({
-                    ownerId: Number(retailerId),
-                    voucherCode:
-                        formData.voucherCode.trim(),
-                    pointsCost:
-                        Number(formData.pointsCost),
-                    expiryDays:
-                        Number(formData.expiryDays),
-                }),
-            });
+
+            const response =
+                await fetch(
+                    url,
+                    {
+                        method:
+                            isEditing
+                                ? "PUT"
+                                : "POST",
+
+                        headers:
+                            getHeaders(),
+
+                        body:
+                            JSON.stringify(
+                                payload
+                            ),
+                    }
+                );
+
+            if (
+                response.status ===
+                    401 ||
+                response.status ===
+                    403
+            ) {
+
+                throw new Error(
+                    "You are not authorized to manage this voucher."
+                );
+            }
 
             if (!response.ok) {
+
+                const errorText =
+                    await response.text();
+
                 throw new Error(
+                    errorText ||
                     `Request failed: ${response.status}`
                 );
             }
@@ -375,23 +768,25 @@ export default function AddVoucherPage({
                     : "Voucher created successfully!"
             );
 
-            setFormData({
-                ownerId: String(retailerId),
-                voucherCode: "",
-                pointsCost: "40",
-                expiryDays: "30",
-            });
-
-            setEditingVoucherId(null);
+            handleCancelEdit();
 
             await fetchRetailerVouchers();
+
         } catch (error) {
-            console.error(error);
+
+            console.error(
+                "Voucher save error:",
+                error
+            );
 
             setStatusMessage(
-                "Failed to save voucher. Please check your inputs."
+                error instanceof Error
+                    ? error.message
+                    : "Failed to save voucher."
             );
+
         } finally {
+
             setLoading(false);
         }
     };
@@ -400,70 +795,112 @@ export default function AddVoucherPage({
     // EXPORT CSV
     // =====================================================
 
-    const handleExportCSV = () => {
-        if (retailerVouchers.length === 0) {
-            setStatusMessage(
-                "No vouchers available to export."
+    const handleExportCSV =
+        () => {
+
+            if (
+                retailerVouchers.length ===
+                0
+            ) {
+
+                setStatusMessage(
+                    "No vouchers available to export."
+                );
+
+                return;
+            }
+
+            const headers = [
+                "voucherId",
+                "ownerId",
+                "shopId",
+                "voucherCode",
+                "discountPercentage",
+                "active",
+                "minimumOrderAmount",
+                "startDate",
+                "endDate",
+            ];
+
+            const rows =
+                retailerVouchers.map(
+                    (voucher) => {
+
+                        return [
+                            voucher.voucherId,
+                            voucher.ownerId,
+                            voucher.shopId,
+
+                            `"${voucher.voucherCode.replace(
+                                /"/g,
+                                '""'
+                            )}"`,
+
+                            voucher.discountPercentage,
+
+                            voucher.active,
+
+                            voucher.minimumOrderAmount ??
+                                "",
+
+                            voucher.startDate ??
+                                "",
+
+                            voucher.endDate ??
+                                "",
+                        ].join(",");
+                    }
+                );
+
+            const csv = [
+                headers.join(","),
+                ...rows,
+            ].join("\n");
+
+            const blob =
+                new Blob(
+                    [csv],
+                    {
+                        type:
+                            "text/csv;charset=utf-8;",
+                    }
+                );
+
+            const url =
+                URL.createObjectURL(
+                    blob
+                );
+
+            const link =
+                document.createElement(
+                    "a"
+                );
+
+            link.href = url;
+
+            link.download =
+                `retailer_vouchers_${new Date()
+                    .toISOString()
+                    .slice(0, 10)}.csv`;
+
+            document.body.appendChild(
+                link
             );
-            return;
-        }
 
-        const headers = [
-            "id",
-            "ownerId",
-            "voucherCode",
-            "pointsCost",
-            "expiryDays",
-        ];
+            link.click();
 
-        const rows = retailerVouchers.map(
-            (voucher) => [
-                voucher.id ??
-                    voucher.voucherId ??
-                    "",
-                voucher.ownerId ?? "",
-                `"${voucher.voucherCode.replace(
-                    /"/g,
-                    '""'
-                )}"`,
-                voucher.pointsCost ?? "",
-                voucher.expiryDays ?? "",
-            ].join(",")
-        );
+            document.body.removeChild(
+                link
+            );
 
-        const csv = [
-            headers.join(","),
-            ...rows,
-        ].join("\n");
+            URL.revokeObjectURL(
+                url
+            );
 
-        const blob = new Blob([csv], {
-            type: "text/csv;charset=utf-8;",
-        });
-
-        const url =
-            URL.createObjectURL(blob);
-
-        const link =
-            document.createElement("a");
-
-        link.href = url;
-        link.download =
-            `retailer_vouchers_${new Date()
-                .toISOString()
-                .slice(0, 10)}.csv`;
-
-        document.body.appendChild(link);
-
-        link.click();
-
-        document.body.removeChild(link);
-
-        URL.revokeObjectURL(url);
-
-        setStatusMessage(
-            "Vouchers exported successfully!"
-        );
-    };
+            setStatusMessage(
+                "Vouchers exported successfully!"
+            );
+        };
 
     // =====================================================
     // IMPORT CSV
@@ -472,59 +909,101 @@ export default function AddVoucherPage({
     const handleImportCSV = (
         event: ChangeEvent<HTMLInputElement>
     ) => {
-        const file = event.target.files?.[0];
+
+        const file =
+            event.target.files?.[0];
 
         if (!file) {
             return;
         }
 
-        const reader = new FileReader();
+        const reader =
+            new FileReader();
 
         reader.onload = async () => {
-            const result = reader.result;
 
-            if (typeof result !== "string") {
+            const result =
+                reader.result;
+
+            if (
+                typeof result !==
+                "string"
+            ) {
                 return;
             }
 
-            const lines = result
-                .split("\n")
-                .filter((line) => line.trim());
+            const lines =
+                result
+                    .split("\n")
+                    .map((line) =>
+                        line.trim()
+                    )
+                    .filter(Boolean);
 
-            if (lines.length < 2) {
+            if (
+                lines.length < 2
+            ) {
+
                 setStatusMessage(
                     "CSV file is empty or missing data."
                 );
+
                 return;
             }
 
-            const headers = lines[0]
-                .split(",")
-                .map((header) =>
-                    header.trim().replace(/"/g, "")
-                );
+            const headers =
+                lines[0]
+                    .split(",")
+                    .map(
+                        (header) =>
+                            header
+                                .trim()
+                                .replace(
+                                    /"/g,
+                                    ""
+                                )
+                    );
 
-            const ownerIndex =
-                headers.indexOf("ownerId");
+            const shopIndex =
+                headers.indexOf(
+                    "shopId"
+                );
 
             const codeIndex =
-                headers.indexOf("voucherCode");
+                headers.indexOf(
+                    "voucherCode"
+                );
 
-            const costIndex =
-                headers.indexOf("pointsCost");
+            const discountIndex =
+                headers.indexOf(
+                    "discountPercentage"
+                );
 
-            const daysIndex =
-                headers.indexOf("expiryDays");
+            const minimumIndex =
+                headers.indexOf(
+                    "minimumOrderAmount"
+                );
+
+            const startIndex =
+                headers.indexOf(
+                    "startDate"
+                );
+
+            const endIndex =
+                headers.indexOf(
+                    "endDate"
+                );
 
             if (
-                ownerIndex === -1 ||
+                shopIndex === -1 ||
                 codeIndex === -1 ||
-                costIndex === -1 ||
-                daysIndex === -1
+                discountIndex === -1
             ) {
+
                 setStatusMessage(
-                    "Invalid CSV headers."
+                    "Invalid CSV headers. Required: shopId, voucherCode, discountPercentage."
                 );
+
                 return;
             }
 
@@ -533,67 +1012,146 @@ export default function AddVoucherPage({
             let successCount = 0;
 
             try {
+
                 for (
                     let i = 1;
                     i < lines.length;
                     i++
                 ) {
-                    const row = lines[i]
-                        .split(
-                            /,(?=(?:(?:[^"]*"){2})*[^"]*$)/
-                        )
-                        .map((value) =>
-                            value
-                                .trim()
-                                .replace(
-                                    /^"|"$/g,
-                                    ""
-                                )
-                        );
 
-                    if (row.length < 4) {
+                    const row =
+                        lines[i]
+                            .split(",")
+                            .map(
+                                (value) =>
+                                    value
+                                        .trim()
+                                        .replace(
+                                            /^"|"$/g,
+                                            ""
+                                        )
+                            );
+
+                    if (
+                        row.length <
+                        3
+                    ) {
                         continue;
                     }
 
-                    const ownerId =
-                        Number(row[ownerIndex]);
+                    const shopId =
+                        Number(
+                            row[
+                                shopIndex
+                            ]
+                        );
 
-                    // Security: import only for logged-in retailer
+                    const code =
+                        row[
+                            codeIndex
+                        ];
+
+                    const discount =
+                        Number(
+                            row[
+                                discountIndex
+                            ]
+                        );
+
                     if (
-                        ownerId !==
-                        Number(retailerId)
+                        !shopId ||
+                        !code ||
+                        discount <= 0 ||
+                        discount > 100
                     ) {
                         continue;
                     }
 
                     const payload = {
-                        ownerId,
+
+                        ownerId:
+                            Number(
+                                retailerId
+                            ),
+
+                        shopId,
+
                         voucherCode:
-                            row[codeIndex],
-                        pointsCost:
-                            Number(row[costIndex]),
-                        expiryDays:
-                            Number(row[daysIndex]),
+                            code
+                                .trim()
+                                .toUpperCase(),
+
+                        discountPercentage:
+                            discount,
+
+                        active: true,
+
+                        minimumOrderAmount:
+                            minimumIndex !==
+                                -1 &&
+                            row[
+                                minimumIndex
+                            ]
+                                ? Number(
+                                      row[
+                                          minimumIndex
+                                      ]
+                                  )
+                                : 0,
+
+                        startDate:
+                            startIndex !==
+                                -1 &&
+                            row[
+                                startIndex
+                            ]
+                                ? row[
+                                      startIndex
+                                  ]
+                                : null,
+
+                        endDate:
+                            endIndex !==
+                                -1 &&
+                            row[
+                                endIndex
+                            ]
+                                ? row[
+                                      endIndex
+                                  ]
+                                : null,
                     };
 
                     try {
+
                         const response =
                             await fetch(
                                 VOUCHER_URL,
                                 {
-                                    method: "POST",
+                                    method:
+                                        "POST",
+
                                     headers:
                                         getHeaders(),
-                                    body: JSON.stringify(
-                                        payload
-                                    ),
+
+                                    body:
+                                        JSON.stringify(
+                                            payload
+                                        ),
                                 }
                             );
 
-                        if (response.ok) {
+                        if (
+                            response.ok
+                        ) {
+
                             successCount++;
                         }
-                    } catch (error) {
+
+                    } catch (
+                        error
+                    ) {
+
                         console.error(
                             "CSV row error:",
                             error
@@ -606,9 +1164,13 @@ export default function AddVoucherPage({
                 );
 
                 await fetchRetailerVouchers();
+
             } finally {
+
                 setLoading(false);
-                event.target.value = "";
+
+                event.target.value =
+                    "";
             }
         };
 
@@ -619,14 +1181,39 @@ export default function AddVoucherPage({
     // REMAINING DAYS
     // =====================================================
 
-    const getRemainingDays = (
-        voucher: Voucher
-    ): number | null => {
-        if (voucher.expiryDate) {
-            const expiryDate =
-                new Date(voucher.expiryDate);
+    const getRemainingDays =
+        (
+            voucher: Voucher
+        ): number | null => {
 
-            const today = new Date();
+            if (
+                !voucher.endDate
+            ) {
+
+                return null;
+            }
+
+            const expiryDate =
+                new Date(
+                    voucher.endDate
+                );
+
+            const today =
+                new Date();
+
+            today.setHours(
+                0,
+                0,
+                0,
+                0
+            );
+
+            expiryDate.setHours(
+                0,
+                0,
+                0,
+                0
+            );
 
             const difference =
                 expiryDate.getTime() -
@@ -634,19 +1221,14 @@ export default function AddVoucherPage({
 
             return Math.ceil(
                 difference /
-                    (1000 * 60 * 60 * 24)
+                    (
+                        1000 *
+                        60 *
+                        60 *
+                        24
+                    )
             );
-        }
-
-        if (
-            voucher.expiryDays !== undefined &&
-            voucher.expiryDays !== null
-        ) {
-            return Number(voucher.expiryDays);
-        }
-
-        return null;
-    };
+        };
 
     // =====================================================
     // FILTER
@@ -654,11 +1236,15 @@ export default function AddVoucherPage({
 
     const filteredVouchers =
         useMemo(() => {
+
             const search =
-                searchTerm.toLowerCase().trim();
+                searchTerm
+                    .toLowerCase()
+                    .trim();
 
             return retailerVouchers.filter(
                 (voucher) => {
+
                     if (!search) {
                         return true;
                     }
@@ -666,13 +1252,19 @@ export default function AddVoucherPage({
                     return (
                         voucher.voucherCode
                             .toLowerCase()
-                            .includes(search) ||
+                            .includes(
+                                search
+                            ) ||
+
                         String(
-                            voucher.ownerId ?? ""
-                        ).includes(search)
+                            voucher.shopId
+                        ).includes(
+                            search
+                        )
                     );
                 }
             );
+
         }, [
             retailerVouchers,
             searchTerm,
@@ -682,12 +1274,22 @@ export default function AddVoucherPage({
     // STATISTICS
     // =====================================================
 
-    const totalPointsAdded =
+    const activeVoucherCount =
+        filteredVouchers.filter(
+            (voucher) =>
+                voucher.active
+        ).length;
+
+    const totalDiscount =
         filteredVouchers.reduce(
-            (total, voucher) =>
+            (
+                total,
+                voucher
+            ) =>
                 total +
                 Number(
-                    voucher.pointsCost || 0
+                    voucher.discountPercentage ||
+                    0
                 ),
             0
         );
@@ -695,23 +1297,26 @@ export default function AddVoucherPage({
     const expiringSoonCount =
         filteredVouchers.filter(
             (voucher) => {
+
                 const remaining =
                     getRemainingDays(
                         voucher
                     );
 
                 return (
-                    remaining !== null &&
+                    remaining !==
+                        null &&
                     remaining >= 0 &&
                     remaining <= 30
                 );
             }
         ).length;
 
-    const avgVoucherCost =
-        filteredVouchers.length > 0
+    const avgDiscount =
+        filteredVouchers.length >
+        0
             ? Math.round(
-                  totalPointsAdded /
+                  totalDiscount /
                       filteredVouchers.length
               )
             : 0;
@@ -726,7 +1331,9 @@ export default function AddVoucherPage({
             {/* HEADER */}
 
             <div className="voucher-header">
+
                 <div>
+
                     <div className="voucher-label">
                         RETAILER
                     </div>
@@ -736,26 +1343,31 @@ export default function AddVoucherPage({
                     </h1>
 
                     <p>
-                        Manage vouchers, imports,
-                        and exports for Retailer ID:
+                        Manage promotional
+                        vouchers for your
+                        shops. Retailer ID:
                         {" "}
                         <strong>
                             {retailerId}
                         </strong>
                     </p>
+
                 </div>
 
                 <div className="voucher-header-actions">
+
                     <button
                         className="secondary-btn"
                         onClick={
                             handleExportCSV
                         }
+                        type="button"
                     >
                         📤 Export CSV
                     </button>
 
                     <label className="secondary-btn import-btn">
+
                         📥 Import CSV
 
                         <input
@@ -765,18 +1377,103 @@ export default function AddVoucherPage({
                                 handleImportCSV
                             }
                         />
+
                     </label>
+
                 </div>
+
             </div>
+
 
             {/* STATISTICS */}
 
             <div className="voucher-stats">
 
                 <div className="voucher-stat-card">
+
                     <div>
+
                         <span>
                             Active Vouchers
+                        </span>
+
+                        <strong>
+                            {
+                                activeVoucherCount
+                            }
+                        </strong>
+
+                        <small>
+                            active records
+                        </small>
+
+                    </div>
+
+                    <div className="stat-icon">
+                        🛡️
+                    </div>
+
+                </div>
+
+
+                <div className="voucher-stat-card">
+
+                    <div>
+
+                        <span>
+                            Average Discount
+                        </span>
+
+                        <strong>
+                            {avgDiscount}%
+                        </strong>
+
+                        <small>
+                            average discount
+                        </small>
+
+                    </div>
+
+                    <div className="stat-icon">
+                        🏷️
+                    </div>
+
+                </div>
+
+
+                <div className="voucher-stat-card">
+
+                    <div>
+
+                        <span>
+                            Expiring Soon
+                        </span>
+
+                        <strong>
+                            {
+                                expiringSoonCount
+                            }
+                        </strong>
+
+                        <small>
+                            within 30 days
+                        </small>
+
+                    </div>
+
+                    <div className="stat-icon">
+                        ⏳
+                    </div>
+
+                </div>
+
+
+                <div className="voucher-stat-card">
+
+                    <div>
+
+                        <span>
+                            Total Vouchers
                         </span>
 
                         <strong>
@@ -786,82 +1483,19 @@ export default function AddVoucherPage({
                         </strong>
 
                         <small>
-                            active records
+                            retailer vouchers
                         </small>
+
                     </div>
 
                     <div className="stat-icon">
-                        🛡️
-                    </div>
-                </div>
-
-                <div className="voucher-stat-card">
-                    <div>
-                        <span>
-                            Total Points Added
-                        </span>
-
-                        <strong>
-                            {
-                                totalPointsAdded.toLocaleString()
-                            }
-                            {" "}
-                            <small>Pts</small>
-                        </strong>
-
-                        <small>
-                            points
-                        </small>
+                        🎟️
                     </div>
 
-                    <div className="stat-icon">
-                        🪙
-                    </div>
-                </div>
-
-                <div className="voucher-stat-card">
-                    <div>
-                        <span>
-                            Expiring Soon
-                        </span>
-
-                        <strong>
-                            {expiringSoonCount}
-                        </strong>
-
-                        <small>
-                            within 30 days
-                        </small>
-                    </div>
-
-                    <div className="stat-icon">
-                        ⏳
-                    </div>
-                </div>
-
-                <div className="voucher-stat-card">
-                    <div>
-                        <span>
-                            Avg Voucher Cost
-                        </span>
-
-                        <strong>
-                            {avgVoucherCost}
-                            {" "}
-                            <small>Pts</small>
-                        </strong>
-
-                        <small>
-                            average cost
-                        </small>
-                    </div>
-
-                    <div className="stat-icon">
-                        📊
-                    </div>
                 </div>
 
             </div>
+
 
             {/* MAIN CONTENT */}
 
@@ -872,7 +1506,9 @@ export default function AddVoucherPage({
                 <div className="voucher-form-card">
 
                     <div className="form-card-header">
+
                         <div>
+
                             <h2>
                                 {editingVoucherId
                                     ? "Edit Voucher"
@@ -882,8 +1518,9 @@ export default function AddVoucherPage({
                             <p>
                                 {editingVoucherId
                                     ? "Modify the existing voucher."
-                                    : "Add a new voucher for your customers."}
+                                    : "Add a promotional voucher for your customers."}
                             </p>
+
                         </div>
 
                         <span
@@ -897,9 +1534,12 @@ export default function AddVoucherPage({
                                 ? "Editing"
                                 : "Create"}
                         </span>
+
                     </div>
 
+
                     {statusMessage && (
+
                         <div
                             className={
                                 statusMessage
@@ -913,7 +1553,9 @@ export default function AddVoucherPage({
                         >
                             {statusMessage}
                         </div>
+
                     )}
+
 
                     <form
                         onSubmit={
@@ -924,6 +1566,7 @@ export default function AddVoucherPage({
                         {/* OWNER */}
 
                         <div className="form-group">
+
                             <label>
                                 Retailer ID
                             </label>
@@ -936,13 +1579,63 @@ export default function AddVoucherPage({
                                 readOnly
                                 className="readonly-input"
                             />
+
                         </div>
+
+
+                        {/* SHOP */}
+
+                        <div className="form-group">
+
+                            <label>
+                                Select Shop
+                            </label>
+
+                            <select
+                                name="shopId"
+                                value={
+                                    formData.shopId
+                                }
+                                onChange={
+                                    handleChange
+                                }
+                                required
+                            >
+
+                                <option value="">
+                                    Select a shop
+                                </option>
+
+                                {shopsList.map(
+                                    (shop) => (
+
+                                        <option
+                                            key={
+                                                shop.shopId
+                                            }
+                                            value={
+                                                shop.shopId
+                                            }
+                                        >
+                                            {
+                                                shop.shopName
+                                            }
+                                        </option>
+
+                                    )
+                                )}
+
+                            </select>
+
+                        </div>
+
 
                         {/* CODE */}
 
                         <div className="form-group">
 
                             <div className="label-row">
+
                                 <label>
                                     Voucher Code
                                 </label>
@@ -956,6 +1649,7 @@ export default function AddVoucherPage({
                                 >
                                     Auto Generate
                                 </button>
+
                             </div>
 
                             <input
@@ -970,86 +1664,198 @@ export default function AddVoucherPage({
                                 placeholder="e.g. SHOP-2026-X8K"
                                 required
                             />
+
                         </div>
 
-                        {/* POINTS */}
+
+                        {/* DISCOUNT */}
 
                         <div className="form-group">
+
                             <label>
-                                Points Cost
+                                Discount Percentage
                             </label>
 
                             <input
                                 type="number"
-                                name="pointsCost"
+                                name="discountPercentage"
                                 value={
-                                    formData.pointsCost
+                                    formData.discountPercentage
                                 }
                                 onChange={
                                     handleChange
                                 }
                                 min="1"
-                                required
-                            />
-                        </div>
-
-                        {/* EXPIRY */}
-
-                        <div className="form-group">
-
-                            <label>
-                                Expiry Days
-                            </label>
-
-                            <input
-                                type="number"
-                                name="expiryDays"
-                                value={
-                                    formData.expiryDays
-                                }
-                                onChange={
-                                    handleChange
-                                }
-                                min="1"
+                                max="100"
+                                step="0.01"
                                 required
                             />
 
                             <div className="quick-picks">
+
                                 <span>
                                     Quick pick:
                                 </span>
 
                                 {[
-                                    "30",
-                                    "60",
-                                    "90",
-                                    "365",
+                                    "5",
+                                    "10",
+                                    "15",
+                                    "20",
+                                    "25",
                                 ].map(
-                                    (days) => (
+                                    (
+                                        percentage
+                                    ) => (
+
                                         <button
                                             type="button"
-                                            key={days}
+                                            key={
+                                                percentage
+                                            }
                                             className={
-                                                formData.expiryDays ===
-                                                days
+                                                formData.discountPercentage ===
+                                                percentage
                                                     ? "quick-btn active"
                                                     : "quick-btn"
                                             }
                                             onClick={() =>
-                                                handleQuickPick(
-                                                    days
+                                                handleQuickDiscount(
+                                                    percentage
                                                 )
                                             }
                                         >
-                                            {days ===
-                                            "365"
-                                                ? "1 Year"
-                                                : `${days}d`}
+                                            {percentage}%
                                         </button>
+
                                     )
                                 )}
+
                             </div>
+
                         </div>
+
+
+                        {/* MINIMUM ORDER */}
+
+                        <div className="form-group">
+
+                            <label>
+                                Minimum Order Amount
+                            </label>
+
+                            <input
+                                type="number"
+                                name="minimumOrderAmount"
+                                value={
+                                    formData.minimumOrderAmount
+                                }
+                                onChange={
+                                    handleChange
+                                }
+                                min="0"
+                                step="0.01"
+                                placeholder="e.g. 500"
+                                required
+                            />
+
+                        </div>
+
+
+                        {/* START DATE */}
+
+                        <div className="form-group">
+
+                            <label>
+                                Start Date
+                            </label>
+
+                            <input
+                                type="date"
+                                name="startDate"
+                                value={
+                                    formData.startDate
+                                }
+                                onChange={
+                                    handleChange
+                                }
+                                required
+                            />
+
+                        </div>
+
+
+                        {/* END DATE */}
+
+                        <div className="form-group">
+
+                            <label>
+                                End Date
+                            </label>
+
+                            <input
+                                type="date"
+                                name="endDate"
+                                value={
+                                    formData.endDate
+                                }
+                                onChange={
+                                    handleChange
+                                }
+                            />
+
+                            <div className="quick-picks">
+
+                                <span>
+                                    Quick expiry:
+                                </span>
+
+                                {[
+                                    {
+                                        label: "30d",
+                                        days: 30,
+                                    },
+                                    {
+                                        label: "60d",
+                                        days: 60,
+                                    },
+                                    {
+                                        label: "90d",
+                                        days: 90,
+                                    },
+                                    {
+                                        label: "1 Year",
+                                        days: 365,
+                                    },
+                                ].map(
+                                    (
+                                        item
+                                    ) => (
+
+                                        <button
+                                            type="button"
+                                            key={
+                                                item.label
+                                            }
+                                            className="quick-btn"
+                                            onClick={() =>
+                                                handleQuickExpiry(
+                                                    item.days
+                                                )
+                                            }
+                                        >
+                                            {
+                                                item.label
+                                            }
+                                        </button>
+
+                                    )
+                                )}
+
+                            </div>
+
+                        </div>
+
 
                         {/* BUTTONS */}
 
@@ -1074,6 +1880,7 @@ export default function AddVoucherPage({
                             </button>
 
                             {editingVoucherId && (
+
                                 <button
                                     type="button"
                                     className="cancel-btn"
@@ -1083,18 +1890,24 @@ export default function AddVoucherPage({
                                 >
                                     Cancel
                                 </button>
+
                             )}
 
                         </div>
+
                     </form>
+
                 </div>
+
 
                 {/* VOUCHER LIST */}
 
                 <div className="voucher-list-section">
 
                     <div className="list-header">
+
                         <div>
+
                             <h2>
                                 All Vouchers
                             </h2>
@@ -1104,53 +1917,59 @@ export default function AddVoucherPage({
                                     filteredVouchers.length
                                 } records
                             </span>
+
                         </div>
 
                         <div className="search-box">
+
                             🔍
 
                             <input
                                 type="text"
-                                placeholder="Search code or Owner ID..."
+                                placeholder="Search code or Shop ID..."
                                 value={
                                     searchTerm
                                 }
                                 onChange={(e) =>
                                     setSearchTerm(
-                                        e.target
-                                            .value
+                                        e.target.value
                                     )
                                 }
                             />
+
                         </div>
+
                     </div>
+
 
                     {filteredVouchers.length ===
                     0 ? (
+
                         <div className="no-vouchers">
+
                             <div>
                                 🎟️
                             </div>
 
                             <h3>
-                                No retailer vouchers
-                                found
+                                No retailer
+                                vouchers found
                             </h3>
 
                             <p>
                                 Create your first
-                                voucher using the
-                                form.
+                                promotional voucher
+                                using the form.
                             </p>
+
                         </div>
+
                     ) : (
+
                         <div className="voucher-grid">
 
                             {filteredVouchers.map(
                                 (voucher) => {
-                                    const voucherId =
-                                        voucher.id ??
-                                        voucher.voucherId;
 
                                     const remaining =
                                         getRemainingDays(
@@ -1158,72 +1977,135 @@ export default function AddVoucherPage({
                                         );
 
                                     return (
+
                                         <div
                                             className="voucher-card"
                                             key={
-                                                voucherId
+                                                voucher.voucherId
                                             }
                                         >
 
                                             <div>
 
                                                 <div className="voucher-card-top">
+
                                                     <h3>
                                                         {
                                                             voucher.voucherCode
                                                         }
                                                     </h3>
 
-                                                    <span className="active-badge">
-                                                        Active
+                                                    <span
+                                                        className={
+                                                            voucher.active
+                                                                ? "active-badge"
+                                                                : "active-badge inactive"
+                                                        }
+                                                    >
+                                                        {voucher.active
+                                                            ? "Active"
+                                                            : "Inactive"}
                                                     </span>
+
                                                 </div>
 
+
                                                 <div className="voucher-info-row">
+
                                                     <span>
-                                                        Owner ID
+                                                        Shop
                                                     </span>
 
                                                     <strong>
                                                         #
                                                         {
-                                                            voucher.ownerId
+                                                            voucher.shopId
                                                         }
                                                     </strong>
+
                                                 </div>
 
+
                                                 <div className="voucher-info-row">
+
                                                     <span>
-                                                        Cost
+                                                        Discount
                                                     </span>
 
                                                     <strong>
-                                                        ⭐{" "}
+                                                        🏷️{" "}
                                                         {
-                                                            voucher.pointsCost
-                                                        }{" "}
-                                                        Points
+                                                            voucher.discountPercentage
+                                                        }
+                                                        %
                                                     </strong>
+
                                                 </div>
 
+
                                                 <div className="voucher-info-row">
+
+                                                    <span>
+                                                        Minimum Order
+                                                    </span>
+
+                                                    <strong>
+                                                        ₹
+                                                        {
+                                                            Number(
+                                                                voucher.minimumOrderAmount ??
+                                                                0
+                                                            ).toLocaleString(
+                                                                "en-IN"
+                                                            )
+                                                        }
+                                                    </strong>
+
+                                                </div>
+
+
+                                                <div className="voucher-info-row">
+
                                                     <span>
                                                         Expires
                                                     </span>
 
                                                     <strong>
-                                                        {voucher.expiryDate
-                                                            ? new Date(
-                                                                  voucher.expiryDate
-                                                              ).toLocaleDateString()
-                                                            : remaining !==
-                                                              null
-                                                            ? `${remaining} Days`
-                                                            : "N/A"}
+                                                        {
+                                                            voucher.endDate
+                                                                ? new Date(
+                                                                      voucher.endDate
+                                                                  ).toLocaleDateString(
+                                                                      "en-IN"
+                                                                  )
+                                                                : "No expiry"
+                                                        }
                                                     </strong>
+
                                                 </div>
 
+
+                                                {remaining !==
+                                                    null && (
+
+                                                    <div className="voucher-info-row">
+
+                                                        <span>
+                                                            Remaining
+                                                        </span>
+
+                                                        <strong>
+                                                            {remaining < 0
+                                                                ? "Expired"
+                                                                : `${remaining} days`}
+                                                        </strong>
+
+                                                    </div>
+
+                                                )}
+
                                             </div>
+
 
                                             <div className="voucher-card-footer">
 
@@ -1234,6 +2116,7 @@ export default function AddVoucherPage({
                                                             voucher.voucherCode
                                                         )
                                                     }
+                                                    type="button"
                                                 >
                                                     📋{" "}
                                                     {copiedCode ===
@@ -1241,6 +2124,7 @@ export default function AddVoucherPage({
                                                         ? "Copied!"
                                                         : "Copy Code"}
                                                 </button>
+
 
                                                 <div className="voucher-actions">
 
@@ -1251,6 +2135,7 @@ export default function AddVoucherPage({
                                                             )
                                                         }
                                                         title="Edit"
+                                                        type="button"
                                                     >
                                                         ✏️
                                                     </button>
@@ -1258,10 +2143,11 @@ export default function AddVoucherPage({
                                                     <button
                                                         onClick={() =>
                                                             handleDeleteClick(
-                                                                voucherId
+                                                                voucher.voucherId
                                                             )
                                                         }
                                                         title="Delete"
+                                                        type="button"
                                                     >
                                                         🗑️
                                                     </button>
@@ -1269,16 +2155,21 @@ export default function AddVoucherPage({
                                                 </div>
 
                                             </div>
+
                                         </div>
+
                                     );
                                 }
                             )}
 
                         </div>
+
                     )}
 
                 </div>
+
             </div>
+
         </div>
     );
 }

@@ -144,7 +144,17 @@ export function CustomerHome() {
   const PRODUCTS_PER_PAGE = 8;
 
   const [aiOpen, setAiOpen] = useState(false);
-  const [open, setOpen] = useState(false);
+
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    type: "success" | "error";
+  }>({
+    open: false,
+    message: "",
+    type: "success",
+  });
+
   const [aiMessage, setAiMessage] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiMessages, setAiMessages] = useState<AiMessage[]>([
@@ -154,6 +164,21 @@ export function CustomerHome() {
     },
   ]);
   
+
+  useEffect(() => {
+    if (!snackbar.open) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setSnackbar((prev) => ({
+        ...prev,
+        open: false,
+      }));
+    }, 3000);
+
+    return () => window.clearTimeout(timer);
+  }, [snackbar.open]);
 
   useEffect(() => {
     const jwtPayload = getJwtPayload();
@@ -309,69 +334,78 @@ export function CustomerHome() {
       setAiLoading(false);
     }
   };
-const handleClose = (
-  event?: React.SyntheticEvent | Event,
-  reason?: string
-) => {
-  if (reason === "clickaway") {
-    return;
-  }
+  const showSnackbar = (
+    message: string,
+    type: "success" | "error" = "success"
+  ) => {
+    setSnackbar({
+      open: true,
+      message,
+      type,
+    });
+  };
 
-  setOpen(false);
-};
-const handleCart = async (
-  product: Product,
-  customerId: number
-) => {
-  try {
-    const token = localStorage.getItem("shopsmart_token");
+  const handleCart = async (
+    product: Product,
+    customerId: number
+  ) => {
+    try {
+      const token = localStorage.getItem("shopsmart_token");
 
-    if (!token) {
-      console.error("ShopSmart JWT token not found.");
-      return;
-    }
+      if (!token) {
+        console.error("ShopSmart JWT token not found.");
 
-    console.log("PRODUCT OBJECT:", product);
-    console.log("PRODUCT ID:", product.productId);
+        showSnackbar(
+          "Your session has expired. Please log in again.",
+          "error"
+        );
 
-    const cartobj = {
-      productId: product.productId,
-      customerId: customerId,
-      quantity: 1,
-    };
-
-    console.log("CART OBJECT:", cartobj);
-
-    const response = await axios.post(
-      CART_URL,
-      cartobj,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+        return;
       }
-    );
 
-    console.log(
-      "Product added to cart:",
-      response.data
-    );
+      console.log("PRODUCT OBJECT:", product);
+      console.log("PRODUCT ID:", product.productId);
 
-    // OPEN SUCCESS SNACKBAR
-    setOpen(true);
-    alert(`${product.productName} added to cart successfully!`);
+      const cartobj = {
+        productId: product.productId,
+        customerId: customerId,
+        quantity: 1,
+      };
 
-  } catch (error) {
-    console.error(
-      "Failed to add product to cart:",
-      error
-    );
+      console.log("CART OBJECT:", cartobj);
 
-    // OPEN ERROR SNACKBAR
-    setOpen(true);
-  }
-};
+      const response = await axios.post(
+        CART_URL,
+        cartobj,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      console.log(
+        "Product added to cart:",
+        response.data
+      );
+
+      showSnackbar(
+        `${product.productName} added to cart successfully!`,
+        "success"
+      );
+    } catch (error) {
+      console.error(
+        "Failed to add product to cart:",
+        error
+      );
+
+      showSnackbar(
+        `Failed to add ${product.productName} to cart. Please try again.`,
+        "error"
+      );
+    }
+  };
   return (
     <div className="shopsmart-home">
      
@@ -695,6 +729,115 @@ const handleCart = async (
             </div>
           )}
         </div>,
+        document.body
+      )}
+
+      {createPortal(
+        snackbar.open ? (
+          <div
+            role="status"
+            aria-live="polite"
+            style={{
+              position: "fixed",
+              top: "24px",
+              right: "24px",
+              zIndex: 2147483647,
+              width: "360px",
+              minHeight: "72px",
+              boxSizing: "border-box",
+              padding: "14px 16px",
+              borderRadius: "14px",
+              background:
+                snackbar.type === "success"
+                  ? "#0f766e"
+                  : "#dc2626",
+              color: "#ffffff",
+              boxShadow:
+                "0 15px 40px rgba(0, 0, 0, 0.25)",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              fontFamily:
+                "Arial, Helvetica, sans-serif",
+            }}
+          >
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                minWidth: "40px",
+                borderRadius: "50%",
+                background: "rgba(255,255,255,0.18)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <i
+                className={
+                  snackbar.type === "success"
+                    ? "bi bi-check-lg"
+                    : "bi bi-exclamation-lg"
+                }
+                style={{
+                  fontSize: "21px",
+                }}
+              ></i>
+            </div>
+
+            <div
+              style={{
+                flex: 1,
+                minWidth: 0,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "15px",
+                  fontWeight: 700,
+                  marginBottom: "3px",
+                }}
+              >
+                {snackbar.type === "success"
+                  ? "Added to Cart"
+                  : "Cart Error"}
+              </div>
+
+              <div
+                style={{
+                  fontSize: "13px",
+                  lineHeight: "1.4",
+                  opacity: 0.95,
+                }}
+              >
+                {snackbar.message}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                setSnackbar((prev) => ({
+                  ...prev,
+                  open: false,
+                }))
+              }
+              style={{
+                border: "none",
+                background: "transparent",
+                color: "#ffffff",
+                fontSize: "22px",
+                lineHeight: 1,
+                cursor: "pointer",
+                padding: "4px",
+                opacity: 0.8,
+              }}
+              aria-label="Close notification"
+            >
+              ×
+            </button>
+          </div>
+        ) : null,
         document.body
       )}
 

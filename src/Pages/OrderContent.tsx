@@ -9,11 +9,33 @@ interface Shop {
     status?: string;
 }
 
+interface Customer {
+    address?: string | null;
+    deliveryAddress?: string | null;
+    phoneNumber?: string | null;
+    phone?: string | null;
+    mobileNumber?: string | null;
+}
+
+interface OrderItem {
+    productId?: number;
+    quantity?: number;
+}
+
+interface Product {
+    productId: number;
+    productName: string;
+}
+
 interface Order {
     orderId: number;
     customerId: number;
     shopId: number;
     totalAmount: number;
+    productName?: string | null;
+    productId?: number | null;
+    items?: OrderItem[];
+    orderItems?: OrderItem[];
     paymentMethod: string;
     paymentStatus: string;
     upiTransactionId?: string | null;
@@ -34,6 +56,11 @@ const SHOP_SERVICE =
 
 const ORDER_SERVICE =
     "http://localhost:8087/shopsmart/orders";
+const CUSTOMER_URL =
+    "http://localhost:8086/customers";
+
+const PRODUCT_URL =
+    "http://localhost:8082/shopsmart/product";
 
 const OrdersContent: React.FC<OrdersContentProps> = ({
     retailerId
@@ -60,12 +87,99 @@ const OrdersContent: React.FC<OrdersContentProps> = ({
     const [deliveryDates, setDeliveryDates] =
         useState<Record<number, string>>({});
 
+    const [customerDetails, setCustomerDetails] =
+        useState<Record<number, Customer>>({});
+
+    const [productNames, setProductNames] =
+        useState<Record<number, string>>({});
+
     // =========================================
     // GET JWT TOKEN
     // =========================================
 
     const getToken = (): string | null => {
         return localStorage.getItem("shopsmart_token");
+    };
+
+    // =========================================
+    // FETCH CUSTOMER DETAILS
+    // =========================================
+
+    const fetchCustomerDetails = async (
+        customerId: number,
+        token: string
+    ): Promise<Customer | null> => {
+        try {
+            const response = await fetch(
+                `${CUSTOMER_URL}/${customerId}`,
+                {
+                    method: "GET",
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        Accept: "application/json"
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                console.error(
+                    "Customer Service error:",
+                    response.status,
+                    await response.text()
+                );
+                return null;
+            }
+
+            return await response.json();
+        } catch (err) {
+            console.error(
+                `Unable to fetch customer ${customerId}:`,
+                err
+            );
+            return null;
+        }
+    };
+
+    // =========================================
+    // FETCH PRODUCT NAME
+    // =========================================
+
+    const fetchProductName = async (
+        productId: number,
+        token: string
+    ): Promise<string | null> => {
+        try {
+            const response = await fetch(
+                `${PRODUCT_URL}/${productId}`,
+                {
+                    method: "GET",
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        Accept: "application/json"
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                console.error(
+                    "Product Service error:",
+                    response.status,
+                    await response.text()
+                );
+                return null;
+            }
+
+            const product: Product =
+                await response.json();
+
+            return product?.productName || null;
+        } catch (err) {
+            console.error(
+                `Unable to fetch product ${productId}:`,
+                err
+            );
+            return null;
+        }
     };
 
     // =========================================
@@ -174,6 +288,8 @@ const OrdersContent: React.FC<OrdersContentProps> = ({
 
                     setSelectedShopId(null);
                     setOrders([]);
+                    setCustomerDetails({});
+                    setProductNames({});
                 }
 
             } catch (err) {
@@ -190,6 +306,8 @@ const OrdersContent: React.FC<OrdersContentProps> = ({
                 setShops([]);
                 setSelectedShopId(null);
                 setOrders([]);
+                setCustomerDetails({});
+                setProductNames({});
 
                 setError(
                     err instanceof Error
@@ -222,6 +340,8 @@ const OrdersContent: React.FC<OrdersContentProps> = ({
         if (!selectedShopId || !retailerId) {
 
             setOrders([]);
+            setCustomerDetails({});
+            setProductNames({});
             setLoadingOrders(false);
 
             return;
@@ -339,6 +459,117 @@ const OrdersContent: React.FC<OrdersContentProps> = ({
 
                 setOrders(orderList);
 
+                // Load product names for the order cards.
+                const productIds = Array.from(
+                    new Set(
+                        orderList.flatMap(order => {
+                            const ids: number[] = [];
+
+                            if (
+                                order.productId &&
+                                Number.isFinite(order.productId)
+                            ) {
+                                ids.push(Number(order.productId));
+                            }
+
+                            const items =
+                                order.items ||
+                                order.orderItems ||
+                                [];
+
+                            items.forEach(item => {
+                                if (
+                                    item.productId &&
+                                    Number.isFinite(item.productId)
+                                ) {
+                                    ids.push(Number(item.productId));
+                                }
+                            });
+
+                            return ids;
+                        })
+                    )
+                );
+
+                const productResults =
+                    await Promise.all(
+                        productIds.map(
+                            async productId => ({
+                                productId,
+                                productName:
+                                    await fetchProductName(
+                                        productId,
+                                        token
+                                    )
+                            })
+                        )
+                    );
+
+                if (!cancelled) {
+                    const namesByProductId:
+                        Record<number, string> = {};
+
+                    productResults.forEach(
+                        ({ productId, productName }) => {
+                            if (productName) {
+                                namesByProductId[
+                                    productId
+                                ] = productName;
+                            }
+                        }
+                    );
+
+                    setProductNames(
+                        namesByProductId
+                    );
+                }
+
+                // Load customer address and phone from Customer Service.
+                const uniqueCustomerIds = Array.from(
+                    new Set(
+                        orderList
+                            .map(order => order.customerId)
+                            .filter(
+                                customerId =>
+                                    Number.isFinite(customerId) &&
+                                    customerId > 0
+                            )
+                    )
+                );
+
+                const customerResults =
+                    await Promise.all(
+                        uniqueCustomerIds.map(
+                            async customerId => ({
+                                customerId,
+                                customer:
+                                    await fetchCustomerDetails(
+                                        customerId,
+                                        token
+                                    )
+                            })
+                        )
+                    );
+
+                if (!cancelled) {
+                    const detailsByCustomerId:
+                        Record<number, Customer> = {};
+
+                    customerResults.forEach(
+                        ({ customerId, customer }) => {
+                            if (customer) {
+                                detailsByCustomerId[
+                                    customerId
+                                ] = customer;
+                            }
+                        }
+                    );
+
+                    setCustomerDetails(
+                        detailsByCustomerId
+                    );
+                }
+
                 // Load existing delivery dates
                 const existingDates:
                     Record<number, string> = {};
@@ -374,6 +605,7 @@ const OrdersContent: React.FC<OrdersContentProps> = ({
                 );
 
                 setOrders([]);
+                setCustomerDetails({});
 
                 setError(
                     err instanceof Error
@@ -440,6 +672,7 @@ const OrdersContent: React.FC<OrdersContentProps> = ({
                 "Updating delivery date:",
                 url
             );
+            // Customer details are loaded when the orders are fetched.
 
             const response = await fetch(
                 url,
@@ -502,7 +735,7 @@ const OrdersContent: React.FC<OrdersContentProps> = ({
                 })
             );
 
-            alert(
+            setError(
                 `Expected delivery date updated for Order #${orderId}`
             );
 
@@ -1081,7 +1314,21 @@ const OrdersContent: React.FC<OrdersContentProps> = ({
                                                         className="order-card"
                                                         style={{
                                                             animationDelay:
-                                                                `${index * 70}ms`
+                                                                `${index * 70}ms`,
+                                                            background:
+                                                                "rgba(255, 255, 255, 0.72)",
+                                                            backdropFilter:
+                                                                "blur(18px)",
+                                                            WebkitBackdropFilter:
+                                                                "blur(18px)",
+                                                            border:
+                                                                "1px solid rgba(255, 255, 255, 0.8)",
+                                                            boxShadow:
+                                                                "0 18px 45px rgba(15, 23, 42, 0.10)",
+                                                            borderRadius:
+                                                                "20px",
+                                                            overflow:
+                                                                "hidden"
                                                         }}
                                                     >
 
@@ -1144,6 +1391,63 @@ const OrdersContent: React.FC<OrdersContentProps> = ({
                                                         {/* DETAILS */}
 
                                                         <div className="order-details">
+
+                                                            <div className="order-detail">
+
+                                                                <span>
+                                                                    PRODUCT
+                                                                </span>
+
+                                                                <strong>
+                                                                    {(() => {
+                                                                        if (order.productName) {
+                                                                            return order.productName;
+                                                                        }
+                                                                       
+
+                                                                        const items =
+                                                                            order.items ||
+                                                                            order.orderItems ||
+                                                                            [];
+
+                                                                        const names =
+                                                                            items
+                                                                                .map(item =>
+                                                                                    item.productId
+                                                                                        ? productNames[
+                                                                                              item.productId
+                                                                                          ]
+                                                                                        : null
+                                                                                )
+                                                                                .filter(
+                                                                                    Boolean
+                                                                                ) as string[];
+
+                                                                        if (
+                                                                            names.length >
+                                                                            0
+                                                                        ) {
+                                                                            return names.join(
+                                                                                ", "
+                                                                            );
+                                                                        }
+
+                                                                        if (
+                                                                            order.productId &&
+                                                                            productNames[
+                                                                                order.productId
+                                                                            ]
+                                                                        ) {
+                                                                            return productNames[
+                                                                                order.productId
+                                                                            ];
+                                                                        }
+
+                                                                        return "";
+                                                                    })()}
+                                                                </strong>
+
+                                                            </div>
 
                                                             <div className="order-detail">
 
@@ -1257,10 +1561,50 @@ const OrdersContent: React.FC<OrdersContentProps> = ({
                                                                 >
                                                                     {
                                                                         order.deliveryAddress ||
-                                                                        "Address not available"
+                                                                        customerDetails[
+                                                                            order.customerId
+                                                                        ]?.address ||
+                                                                        customerDetails[
+                                                                            order.customerId
+                                                                        ]?.deliveryAddress ||
+                                                                        "Address will updated on DeliveryDate"
                                                                     }
                                                                 </p>
 
+                                                            </div>
+
+                                                            {/* CUSTOMER CONTACT */}
+
+                                                            <div
+                                                                style={{
+                                                                    marginBottom: "14px"
+                                                                }}
+                                                            >
+                                                                <strong>
+                                                                    📞 Customer Phone
+                                                                </strong>
+
+                                                                <p
+                                                                    style={{
+                                                                        margin:
+                                                                            "5px 0 0",
+                                                                        color:
+                                                                            "#475569"
+                                                                    }}
+                                                                >
+                                                                    {
+                                                                        customerDetails[
+                                                                            order.customerId
+                                                                        ]?.phoneNumber ||
+                                                                        customerDetails[
+                                                                            order.customerId
+                                                                        ]?.phone ||
+                                                                        customerDetails[
+                                                                            order.customerId
+                                                                        ]?.mobileNumber ||
+                                                                        "Phone number will be updated shortly.."
+                                                                    }
+                                                                </p>
                                                             </div>
 
                                                             {/* EXPECTED DELIVERY */}

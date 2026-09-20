@@ -34,6 +34,7 @@ import OrderHistory from "./Pages/OrderHistory";
 import AddVoucherPage from "./Pages/AddVoucherPage";
 import ProfileRetailer from "./Pages/ProfileRetailer";
 import LoyaltyPage from "./Pages/LoyaltyPage";
+import Contact from "./Pages/Contact";
 
 type Shop = Parameters<
     NonNullable<React.ComponentProps<typeof ShopView>["onSelectShop"]>
@@ -171,7 +172,7 @@ function App(): React.JSX.Element {
                     />
                     <Route path="loyaltypage" element={<LoyaltyPage/>}/>
 
-
+                    <Route path="contact" element={<Contact/>}/>
                     <Route
                         path="order"
                         element={<OrderPage />}
