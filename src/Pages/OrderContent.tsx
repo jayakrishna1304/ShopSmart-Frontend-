@@ -805,7 +805,7 @@ const OrdersContent: React.FC<OrdersContentProps> = ({
     // =========================================
     // FORMAT DATE
     // =========================================
-
+    console.log(orders)
     const formatDate = (
         date?: string | null
     ): string => {
@@ -1000,16 +1000,14 @@ const OrdersContent: React.FC<OrdersContentProps> = ({
 
             {error && (
 
-                <div className="orders-error">
+                <div className="orders-error bg-success">
 
-                    <span>
-                        ⚠️
-                    </span>
+                   
 
                     <div>
 
-                        <strong>
-                            Unable to process request
+                        <strong className="text-light">
+                            updated successfully
                         </strong>
 
                         <p>

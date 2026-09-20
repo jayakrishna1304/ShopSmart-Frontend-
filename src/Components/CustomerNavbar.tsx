@@ -4,7 +4,7 @@ export function Customernavbar() {
   const navigate = useNavigate();
   return (
     <>
-      <nav className="navbar navbar-expand-lg navbar-dark bg-dark py-2 shadow-sm border-bottom border-secondary border-opacity-25" style={{ backdropFilter: 'blur(10px)', position: 'sticky', top: 0, zIndex: 1050 }}>
+      <nav className="navbar navbar-expand-lg navbar-dark bg-dark py-2 shadow-sm border-bottom border-secondary border-opacity-25" style={{ backdropFilter: 'blur(10px)', position: 'fixed', top: 0, zIndex: 1050,width:"100%"}}>
         {/* 🌟 FIX: Changed 'container' to 'container-fluid px-4' to minimize dead margins on left & right */}
         <div className="container-fluid px-4 d-flex justify-content-between align-items-center">
           
