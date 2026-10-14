@@ -162,9 +162,8 @@ function Register(): React.JSX.Element {
         </div>
       </div>
 
-      {/* ==========================================
-          REGISTER CARD
-      ========================================== */}
+     
+
       <div 
         className="card p-4 border-0 m-3 my-5" 
         style={{ 
@@ -408,18 +407,18 @@ function Register(): React.JSX.Element {
               >
                 <i className="bi bi-info-circle"></i>
               </span>
-              <input 
-                type="text" 
-                className={`form-control border-start-0 ${errors.userRole ? 'is-invalid' : ''}`} 
+             <select className={`form-control border-start-0 ${errors.userRole ? 'is-invalid' : ''}`} 
+             {...register('userRole', { required: 'System node roles are mandatory parameters' })}
                 style={{
                   backgroundColor: isDarkMode ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.05)",
                   borderColor: isDarkMode ? "rgba(0, 230, 118, 0.3)" : "rgba(0, 0, 0, 0.15)",
                   color: isDarkMode ? "#ffffff" : "#212529",
                   fontWeight: "500"
-                }}
-                placeholder="e.g., CUSTOMER or RETAILER" 
-                {...register('userRole', { required: 'System node roles are mandatory parameters' })} 
-              />
+                }}>
+              <option value="" style={{color:"black"}}>Select Role</option>
+              <option value="customer" style={{color:"black"}}>CUSTOMER</option>
+              <option value="RETAILER" style={{color:"black"}}>RETAILER</option>
+             </select>
               {errors.userRole && <div className="invalid-feedback fw-bold text-danger">{errors.userRole.message as string}</div>}
             </div>
           </div>
